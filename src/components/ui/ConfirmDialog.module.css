@@ -1,0 +1,91 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: color-mix(in srgb, #000 45%, transparent);
+  backdrop-filter: blur(2px);
+}
+.card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e3);
+  padding: var(--space-5);
+}
+.title {
+  margin: 0;
+  font-size: var(--type-body);
+  font-weight: 600;
+  line-height: var(--lh-body);
+  color: var(--text-1);
+}
+.body {
+  margin: var(--space-2) 0 0;
+  font-size: var(--type-footnote);
+  line-height: var(--lh-body);
+  color: var(--text-3);
+}
+.btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+.ghost,
+.primary,
+.danger {
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ghost {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--text-1);
+}
+.primary {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+}
+.danger {
+  border: none;
+  background: var(--state-cancelled);
+  color: #fff;
+}
+.ghost:disabled,
+.primary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Phone ---
+   These two buttons decide whether something is deleted, so they are the last
+   place to accept a 40px target: a mis-tap either destroys something or, on the
+   Cancel side, is read as a confirm. Full-width and stacked below 380px, where
+   side-by-side leaves each one narrow enough to fat-finger. */
+@media (max-width: 768px) {
+  .ghost,
+  .primary,
+  .danger {
+    min-height: 44px;
+  }
+}
+@media (max-width: 380px) {
+  .btns {
+    flex-direction: column-reverse;
+  }
+  .ghost,
+  .primary,
+  .danger {
+    width: 100%;
+  }
+}

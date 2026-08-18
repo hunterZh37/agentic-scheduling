@@ -1,0 +1,1319 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--bg-canvas);
+}
+
+.pageFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+.pageFooter a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+.pageFooter a:hover {
+  text-decoration: underline;
+}
+.footerSep {
+  color: var(--text-3);
+}
+
+/* --- Window --- */
+.window {
+  width: 100%;
+  max-width: 920px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  box-shadow: var(--e3);
+}
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--hairline);
+}
+.back {
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.back:hover {
+  color: var(--text-1);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 296px minmax(0, 1fr);
+  /* Was a hard `height: 540px`. Combined with `overflow: hidden` on .window it
+     capped the card, so a day with more times than fit was clipped and the
+     leftovers hidden behind an inner scrollbar — "the scrollable area is too
+     small to see the available slots". A floor keeps the card's proportions on
+     a quiet day; the times decide the height on a busy one. */
+  min-height: 540px;
+}
+
+/* --- Left rail --- */
+.rail {
+  padding: var(--space-6) var(--space-5);
+  background: var(--surface-sunken);
+  border-right: 1px solid var(--hairline);
+  /* Column flex so the authorship credit can anchor to the bottom of the rail
+     (margin-top: auto) instead of leaving a dead gap beneath it. */
+  display: flex;
+  flex-direction: column;
+}
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-pill);
+  background: var(--hairline-strong);
+  object-fit: cover;
+  margin-bottom: var(--space-3);
+}
+.hostName {
+  font-size: var(--type-callout);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.eventTitle {
+  /* Clear air above the title so the identity block (photo, name, practice)
+     and the action ("Book time…") read as two groups, not one run-on column. */
+  margin: var(--space-5) 0 var(--space-4);
+  font-size: var(--type-title2);
+  line-height: var(--lh-title2);
+  font-weight: var(--w-title2);
+  letter-spacing: var(--tr-title2);
+}
+/* Consulting areas — one per line under a quiet section label. Sized to read
+   as supporting detail beneath the title, not a second block of body copy. */
+.railLabel {
+  font-size: var(--type-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  margin-bottom: var(--space-3);
+}
+.areas {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+  color: var(--text-2);
+}
+.areaDot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--hairline-strong);
+}
+/* Items are stored mid-sentence-cased for the prose form; title-case them
+   here ("product development" → "Product Development", "AI" stays intact). */
+.areaText {
+  text-transform: capitalize;
+}
+/* Research-site link under the areas list — same quiet accent treatment as
+   the practice link above. */
+.research {
+  margin: 0 0 var(--space-4);
+  font-size: var(--type-footnote);
+}
+.research a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.research a:hover {
+  text-decoration: underline;
+}
+
+/* "Built by" credit — subtle by size and colour, but hard to miss thanks to
+   the hairline that gives it its own zone and the accent dot that catches the
+   eye. The name itself is full-contrast so it reads as a signature, not a
+   disclaimer. */
+.builtBy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Anchors to the rail's bottom edge (flex column parent), so the space the
+     rail owes to the taller scheduler beside it sits between the content and
+     the credit instead of dangling below it. When the rail is content-height
+     (stacked mobile layout) the auto margin collapses to 0, so the padding
+     alone keeps the credit off the meta list. */
+  margin: auto 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--type-caption);
+  line-height: var(--lh-caption);
+  color: var(--text-3);
+}
+.builtBy strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.builtByDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+/* Open-source call-to-action under the credit: an accent link headline with a
+   quiet one-line note beneath it. */
+.sourceLink {
+  margin: var(--space-2) 0 0;
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+}
+.sourceLink a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.sourceLink a:hover {
+  text-decoration: underline;
+}
+.sourceNote {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--type-caption);
+  line-height: var(--lh-caption);
+  color: var(--text-3);
+}
+
+/* --- Scheduler --- */
+.scheduler {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.rail {
+  overflow-y: auto;
+}
+.switcher {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+/* The moving selection: one raised pill the width of a tab, sliding between the
+   two segments instead of the highlight teleporting. */
+.switcherThumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 9px) / 2);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--e1);
+  transition: transform var(--dur-base) var(--ease-emphasized);
+  pointer-events: none;
+}
+.switcherThumbEnd {
+  transform: translateX(calc(100% + 3px));
+}
+
+/* Height glides between the two panels (they differ in height) instead of the
+   card snapping; the incoming panel cross-fades in over it. */
+.panelHost {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: panelIn var(--dur-base) var(--ease-standard);
+}
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .switcherThumb {
+    transition: none;
+  }
+  .panel {
+    animation: none;
+  }
+}
+
+/* Banner shown when the page is in reschedule mode. */
+.rescheduleBanner {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--hairline);
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+}
+
+/* Meeting-length picker above the calendar. */
+.durationRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.durationLabel {
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--text-2);
+  /* Never break mid-phrase ("How / long?") — on narrow screens the pills wrap
+     instead, and the label keeps its single line. */
+  white-space: nowrap;
+}
+.durationPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.durationPill {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  transition-property: background-color, color, border-color, box-shadow, transform;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+}
+.durationPill:hover {
+  border-color: var(--accent);
+  color: var(--text-1);
+}
+.durationPillActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.customField {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.customInput {
+  width: 60px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-footnote);
+  font-weight: 600;
+}
+.customInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-callout);
+  font-weight: 500;
+  cursor: pointer;
+  /* Only colour transitions here — the raised surface is the sliding thumb. */
+  transition: color var(--dur-base) var(--ease-standard);
+}
+.tabActive {
+  color: var(--text-1);
+}
+
+.pickGrid {
+  display: grid;
+  /* The slot column was a fixed 200px, which fits exactly one time per row.
+     Paired with a height set by the calendar beside it, that showed 6 of 25
+     openings behind a scrollbar — most of the day invisible unless you found
+     and used an inner scroll region. It now gets enough width for two columns
+     of times. */
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  gap: var(--space-5);
+  flex: 1;
+  /* The row's height came entirely from the mini-month beside it, which left
+     the times a 346px window. Give the row a floor so the list can show most
+     of a normal day without scrolling; the calendar just aligns to the top of
+     the taller row. Fits a 768px-tall laptop with room to spare. */
+  min-height: 480px;
+}
+
+/* --- Mini month --- */
+.month {
+  min-width: 0;
+}
+.monthHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.monthTitle {
+  font-size: var(--type-title3);
+  font-weight: 600;
+}
+.monthNav {
+  display: flex;
+  gap: var(--space-1);
+}
+.monthBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: var(--surface-sunken);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 15px;
+}
+.monthBtn:hover {
+  background: var(--hairline-strong);
+}
+.dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  margin-bottom: var(--space-1);
+}
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  justify-items: center;
+}
+.day {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.day:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+.dayPast {
+  color: var(--text-3);
+  cursor: default;
+}
+.dayToday {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+.daySelected,
+.daySelected:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* --- Slots --- */
+.slotCol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.tzPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  margin-bottom: var(--space-3);
+}
+.globe {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.tzSelect {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--type-footnote);
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.slotList {
+  /* Deliberately NOT a scroll container. A list of times inside a fixed-height
+     card is a box most people never scroll: they see the first few, assume
+     that is the day, and leave. Let it be as tall as the day is and let the
+     page scroll — one gesture, everything visible. */
+  flex: none;
+  min-height: 0;
+  overflow: visible;
+  /* Two columns rather than a single file: twice the day visible before
+     anyone has to scroll, in the same space. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--space-2);
+  padding-right: 2px;
+}
+/* Hints ("Pick a day…", "No open times that day.") are prose, not a time. */
+.slotList > p {
+  grid-column: 1 / -1;
+}
+.slotHint {
+  font-size: var(--type-footnote);
+  color: var(--text-3);
+  text-align: center;
+  margin-top: var(--space-6);
+}
+.slot {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+  transition-property: background-color, color, border-color, box-shadow, transform;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+  /* Each time the day or duration changes the slots remount, so this gentle
+     fade replays — the new times arrive rather than snapping into place. */
+  animation: slotIn var(--dur-base) var(--ease-standard);
+}
+@keyframes slotIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+.slot:hover {
+  border-color: var(--accent);
+}
+.slotSelected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: var(--e2);
+  transform: translateY(-1px);
+}
+
+/* --- Confirm bar --- */
+.confirmBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+}
+.selInfo {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--type-callout);
+  color: var(--text-1);
+}
+.selLabel {
+  font-size: var(--type-caption);
+  color: var(--text-2);
+}
+.next {
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.next:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* --- Confirm form --- */
+.formCard {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-6);
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  border: 1px solid var(--hairline);
+}
+.back {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: var(--space-3);
+}
+.formTitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--type-title2);
+  font-weight: 600;
+  letter-spacing: var(--tr-title2);
+}
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  margin-bottom: var(--space-5);
+}
+.dateBadge {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Tight line boxes so "JUL" (9px) and "13" (17px) hug each other and sit
+     optically centered, instead of floating in the inherited 22px line box. */
+  gap: 2px;
+  line-height: 1;
+}
+.badgeMon {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--state-cancelled);
+  letter-spacing: 0.04em;
+}
+.badgeDay {
+  font-size: var(--type-title3);
+  font-weight: 700;
+}
+.summaryTime {
+  font-size: var(--type-title3);
+  font-weight: 600;
+}
+.summarySub {
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.label {
+  display: block;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: var(--space-1);
+}
+.optional {
+  font-weight: 400;
+  color: var(--text-3);
+}
+.input,
+.textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-body);
+  font-family: inherit;
+  margin-bottom: var(--space-4);
+}
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.textarea {
+  resize: vertical;
+}
+.formError {
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-footnote);
+  color: var(--state-cancelled);
+}
+.confirmBtn {
+  display: block;
+  width: 100%;
+  padding: var(--space-4);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--type-body);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Stacked full-width action buttons on the manage screen. */
+.manageActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.manageActions > * {
+  width: 100%;
+  flex: none;
+}
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Success --- */
+.successCard {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-8) var(--space-6);
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  border: 1px solid var(--hairline);
+  text-align: center;
+}
+.check {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto var(--space-4);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--state-free) 18%, transparent);
+  color: var(--state-free);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+}
+.successTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--type-title2);
+  font-weight: 600;
+}
+.successSub {
+  margin: 0 0 var(--space-5);
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.successSummary {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  text-align: left;
+  margin-bottom: var(--space-5);
+}
+.successEvent {
+  font-size: var(--type-caption);
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  margin-bottom: var(--space-1);
+}
+.successWhen {
+  font-size: var(--type-title3);
+  font-weight: 700;
+}
+.successTz {
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+  margin-top: var(--space-1);
+}
+.successVideo {
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+  margin-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.successVideo a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.successActions {
+  display: flex;
+  gap: var(--space-3);
+}
+.secondary {
+  flex: 1;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  font-weight: 500;
+  cursor: pointer;
+}
+.secondary:hover {
+  background: var(--surface-sunken);
+}
+
+/* --- Public agent chat --- */
+.chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.chatThread {
+  flex: 1;
+  min-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-1) 0 var(--space-4);
+}
+.chatRow {
+  display: flex;
+}
+.chatRowUser {
+  justify-content: flex-end;
+}
+.chatRowAgent {
+  justify-content: flex-start;
+}
+.chatBubble {
+  max-width: 82%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--type-callout);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+.chatAgent {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  border-radius: 16px 16px 16px 4px;
+}
+.chatUser {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+}
+
+/* Markdown rendering inside agent bubbles (bold / strike / lists / code). */
+.chatAgent p {
+  margin: 0 0 var(--space-2);
+}
+.chatAgent p:last-child {
+  margin-bottom: 0;
+}
+.chatAgent ul {
+  margin: var(--space-1) 0 var(--space-2);
+  padding-left: 1.15em;
+}
+.chatAgent ul:last-child {
+  margin-bottom: 0;
+}
+.chatAgent li {
+  margin: 2px 0;
+}
+.chatAgent strong {
+  font-weight: 600;
+}
+.chatAgent del {
+  opacity: 0.55;
+}
+.chatAgent code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--hairline);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+/* Typing indicator shown while the assistant is composing a reply. */
+.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.typingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--text-3);
+  animation: typingBounce 1.2s var(--ease-standard) infinite;
+}
+.typingDot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typingDot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typingDot {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+/* Starter-prompt chips above the composer. */
+.chatSuggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-2);
+}
+.chatChip {
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  cursor: pointer;
+  transition-property: background-color, color, border-color, box-shadow, transform;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+}
+.chatChip:hover {
+  border-color: var(--accent);
+  color: var(--text-1);
+}
+
+.chatComposer {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.chatInput {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  font-family: inherit;
+}
+.chatInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.chatSend {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+.chatSend:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* --- Responsive (mobile-first booking) --- */
+@media (max-width: 768px) {
+  .page {
+    padding: var(--space-3);
+    align-items: start;
+  }
+  .body {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .rail {
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .pickGrid {
+    grid-template-columns: 1fr;
+    /* Stacked on a phone, so the desktop height floor would just add dead
+       space between the calendar and the times. */
+    min-height: 0;
+  }
+  /* On desktop the slot list is a scrolling column beside a fixed-height
+     calendar. On a phone that became a 320px box scrolling INSIDE the page
+     scroll: two nested scroll regions, where flicking the small one often
+     scrolls the page instead and the times underneath are easy to miss
+     entirely. On a day with one opening it collapsed to a 46px sliver.
+
+     Let it be as tall as its contents and let the PAGE scroll — the one
+     gesture a phone user expects. */
+  /* One time per row is the desktop shape, where the list is a scrolling
+     column beside the calendar. Stacked on a phone it became a single file of
+     16-27 rows — 888px on a quiet day, 1504px on a busy one — so most of the
+     day sat below the fold and picking a late slot meant a long scroll past
+     everything else.
+
+     A two-column grid puts roughly twice as many times on screen at once and
+     halves the page. Two, not three: "12:30 PM" needs the width to stay
+     readable at 320px. The list is its natural height and the PAGE scrolls —
+     no scroll region nested inside another. */
+  .slotList {
+    max-height: none;
+    overflow-y: visible;
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+    align-content: start;
+    /* Only meaningful for a scroll container; leaving them on would keep the
+       overscroll trap without the scrollbar that explains it. */
+    overscroll-behavior: auto;
+    padding-right: 0;
+  }
+  /* The hint ("Pick a day…", "No open times that day.") is prose, not a time —
+     it spans the grid instead of being squeezed into one column. */
+  .slotHint {
+    grid-column: 1 / -1;
+  }
+  .slot {
+    /* 44px minimum touch target, and centred now that a slot is a tile rather
+       than a full-width bar. */
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2);
+  }
+  .chatSend {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* --- Phone ergonomics (verified with device emulation at 390/412px) --- */
+
+  /* iOS auto-zooms into any focused control whose font-size is under 16px, and
+     doesn't zoom back out — so the visitor is left on a magnified, sideways-
+     scrolling page mid-booking. These three were 13-15px. */
+  .tzSelect,
+  .customInput,
+  .input,
+  .textarea {
+    font-size: 16px;
+  }
+
+  /* Tap targets: 44px is the documented minimum for reliable touch. The Back
+     button on the confirm step was the worst (22px tall) and sits mid-flow,
+     where a missed tap costs a booking. */
+  .back {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    /* Pull the enlarged hit area back so it doesn't visually shift the layout. */
+    margin-left: calc(-1 * var(--space-2));
+    padding-inline: var(--space-2);
+  }
+  .durationPill,
+  .customInput,
+  .tab {
+    min-height: 44px;
+  }
+  .durationPill,
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The date grid is the booking page's primary control and was its smallest:
+     34px cells with a 28px month arrow beside them. Height goes to 44px; width
+     stays fluid and only caps at 44, because seven fixed 44px columns overflow
+     a 320px phone sideways - trading a touch bug for a layout one. */
+  .day {
+    width: 100%;
+    max-width: 44px;
+    height: 44px;
+  }
+  .monthBtn {
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+  }
+  /* 224x20: wide enough to hit, far too short. */
+  .tzSelect {
+    min-height: 44px;
+  }
+  /* Suggested prompts on the assistant tab, 36px tall. */
+  .chatChip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  /* Footer links were 22px tall here while the same links on /login were
+     already fixed at 44 - the earlier pass only touched login.module.css.
+     The links look identical; only the hit area grows. */
+  .pageFooter a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+  }
+}
+
+/* --- Times dialog ---------------------------------------------------------
+   Picking a day opens the day's times here rather than in the card. The inline
+   column had to share a fixed-height card with the calendar, so a busy day was
+   always either clipped or hidden behind an inner scrollbar. A dialog owns the
+   screen: it can be as tall as the day is, and on the rare day that overflows
+   it, the thing scrolling is the only thing on screen. */
+.slotBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(2px);
+  animation: slotBkFade var(--dur-base) var(--ease-standard);
+}
+@keyframes slotBkFade {
+  from {
+    opacity: 0;
+  }
+}
+.slotDialog {
+  width: 100%;
+  max-width: 460px;
+  /* Never taller than the screen; the body scrolls if a day really is that
+     full. Everything else is pinned so the header stays put. */
+  max-height: min(85dvh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  overflow: hidden;
+  /* Centered on desktop: rise in. Mobile overrides this to a slide-up sheet. */
+  animation: slotDlgRise var(--dur-slow) var(--ease-emphasized);
+}
+@keyframes slotDlgRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.slotDialogHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+.slotDialogTitle {
+  margin: 0;
+  font-size: var(--type-title3);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.slotDialogSub {
+  margin: 2px 0 0;
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.slotDialogClose {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px 0 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 16px;
+  cursor: pointer;
+}
+.slotDialogClose:hover {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+}
+.slotDialogBody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* This IS a scroll container, unlike the inline list — here it is the only
+     thing on screen, so a scrollbar reads as "more below" instead of hiding
+     the day behind a box nobody notices. */
+  overscroll-behavior: contain;
+}
+.slotDialogBody > p {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 768px) {
+  /* Bottom sheet on a phone: thumb-reachable, and it does not fight the
+     browser chrome at the top of the screen. */
+  .slotBackdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .slotDialog {
+    max-width: none;
+    max-height: 88dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    /* Clear the home indicator. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* Slides up as a sheet, and lifts off the page with a deep upward shadow. */
+    animation: slotDlgSheetUp var(--dur-slow) var(--ease-emphasized);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.34);
+  }
+  /* Grab handle so it reads as a draggable sheet (it is — drag it down to
+     dismiss), not a panel wedged against the bottom edge. */
+  .slotDialog::before {
+    content: "";
+    flex: none;
+    width: 36px;
+    height: 4px;
+    margin: var(--space-2) auto 0;
+    border-radius: 999px;
+    background: var(--hairline-strong);
+  }
+}
+@keyframes slotDlgSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+/* Gentler entrance for reduced-motion: the sheet/dialog appears without sliding
+   or scaling. (Drag-to-dismiss is user-driven, so it stays.) */
+@media (prefers-reduced-motion: reduce) {
+  .slotBackdrop,
+  .slotDialog,
+  .slot {
+    animation: none;
+  }
+}
+
+/* The details step of the times dialog. The dialog already supplies the panel,
+   so the form drops its own card chrome and just stacks its fields. */
+.slotDialogForm {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+.formPlain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+/* Back arrow in the dialog header, shown on the details step. */
+.slotDialogBack {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -6px 0 0 -10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.slotDialogBack:hover {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+}
+
+/* What the booking is for: the practice, its domain, and the fields it covers.
+   Sits between the host name and the event title, quiet enough not to compete
+   with either. */
+.practice {
+  margin: 2px 0 0;
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+  line-height: var(--lh-body);
+}
+.practice a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.practice a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  /* The practice and research links are the only tappable things in the rail,
+     so they get real targets rather than a 16px line of text. */
+  .practice a,
+  .research a,
+  .sourceLink a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* Beside the pills the label costs a quarter of the screen and squeezes
+     them into three ragged rows; stacked above, the pills get the full width. */
+  .durationRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}

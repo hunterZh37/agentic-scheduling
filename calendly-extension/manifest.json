@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Calendly Availability",
+  "version": "1.0.0",
+  "description": "Badges each Calendly time slot with your own free/busy, pulled live from your self-hosted scheduling app.",
+  "host_permissions": ["https://your-deployment.example.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://calendly.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": { "service_worker": "background.js" }
+}

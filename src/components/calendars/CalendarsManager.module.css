@@ -1,0 +1,312 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.32);
+  animation: fade var(--dur-base) var(--ease-standard);
+}
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  border: 1px solid var(--hairline);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  max-height: 85vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: rise var(--dur-slow) var(--ease-emphasized);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+.title {
+  margin: 0;
+  font-size: var(--type-title3);
+  font-weight: 600;
+}
+.count {
+  font-size: var(--type-footnote);
+  font-weight: 400;
+  color: var(--text-3);
+  margin-left: var(--space-1);
+}
+.addBtn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--accent);
+  font-size: 18px;
+  text-decoration: none;
+}
+.addBtn:hover { background: var(--hairline-strong); }
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.row:last-child { border-bottom: none; }
+/* Swatch · name · primary action. The row's own line, always. */
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* While editing, the row is a small panel rather than a list item, so the
+   controls that appear read as belonging to this calendar and not to the list. */
+.rowEditing {
+  background: var(--surface-2, rgba(127, 127, 127, 0.06));
+  border-radius: var(--radius-md, 10px);
+  padding: var(--space-3);
+  margin: var(--space-1) 0;
+}
+
+.swatch {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.swatchBox {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 2px solid;
+  display: grid;
+  place-items: center;
+}
+.tick {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Takes the slack in the row, so the ⋯ sits hard right and a long address
+   truncates instead of shoving it off the edge. */
+.nameWrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nameWrap,
+.name {
+  font-size: var(--type-body);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Name and its "Bookings" badge are a flex pair so the NAME truncates and the
+   badge keeps its size — previously the badge was pushed off the sheet. */
+.name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+/* The label itself truncates. It has to be an element: text-overflow does not
+   apply to a bare text node inside a flex container. */
+.nameText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.subEmail,
+.editEmail {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+/* An address is one long unbreakable token, so it has to be allowed to shrink
+   and ellipsize — otherwise it holds the row open and the controls beside it
+   get pushed off the edge. */
+.editEmail {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editInput {
+  /* Was shrink-to-fit, so the field showed about seven characters — you could
+     not read the name you were typing. */
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-size: var(--type-body);
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text-1);
+  outline: none;
+}
+
+.more {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  /* The only rename affordance — secondary contrast so it's discoverable at
+     rest rather than a near-invisible tertiary glyph. */
+  color: var(--text-2);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+.more:hover { color: var(--text-1); }
+.editActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: calc(22px + var(--space-3)); /* line up under the name */
+  /* The armed "Remove?" is wider than the ✕ it replaces. Without wrapping, that
+     extra width pushed the button past the panel edge and it was clipped
+     mid-word — you could not read what you were confirming. */
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+.spacer { flex: 1 1 auto; }
+
+/* Buttons that look like buttons. These were bare coloured text sitting flush
+   against the name and each other, so "Send bookings here Remove Done" read as
+   one sentence — there was nothing to tell you where a control started. */
+.btn,
+.btnPrimary,
+.btnDanger {
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: var(--type-caption);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.btn {
+  background: transparent;
+  border-color: var(--hairline);
+  color: var(--text-2);
+}
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btnPrimary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent, #fff);
+  text-decoration: none;
+}
+.btnPrimary:hover { filter: brightness(1.08); }
+.btnDanger {
+  background: var(--danger, #e5484d);
+  border-color: var(--danger, #e5484d);
+  color: #fff;
+}
+/* Remove is an ✕ until it is armed, then a labelled confirm. Destructive and
+   rare, so it should not carry the visual weight of a primary action. */
+.iconDanger {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.iconDanger:hover {
+  color: var(--danger, #e5484d);
+  border-color: var(--danger, #e5484d);
+  background: color-mix(in srgb, var(--danger, #e5484d) 10%, transparent);
+}
+/* Which calendar new bookings are written to. Quiet, but always visible at
+   rest: it is the only property here that affects visitors rather than the
+   owner's own view. */
+.destBadge {
+  /* flex-shrink:0 alongside a truncating name: on a 320px phone the badge was
+     pushed past the edge of the sheet instead of the NAME giving way. */
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: var(--type-caption);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+
+/* --- Phone: touch floors --------------------------------------------------
+   Every control in this sheet was under the 44px floor — the colour swatch at
+   22px, the ⋯ at 22px, "Sign out" at 22px. Fine with a mouse, a coin-toss with
+   a thumb. */
+@media (max-width: 768px) {
+  .row {
+    padding: var(--space-2) 0;
+  }
+  .rowMain {
+    min-height: 44px;
+  }
+  /* Target grows to the 44px floor; the visible square does not. */
+  .swatch {
+    width: 44px;
+    height: 44px;
+    margin-left: -11px;
+  }
+  .more,
+  .iconDanger {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .btn,
+  .btnPrimary,
+  .btnDanger,
+  .editInput {
+    min-height: 44px;
+  }
+  .addBtn {
+    width: 44px;
+    height: 44px;
+  }
+}

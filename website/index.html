@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic Scheduling: all your calendars, run by an AI agent</title>
+<meta name="description" content="Free, open-source, self-hosted scheduling: an AI agent synchronizes all your calendars, finds the time that works, and books meetings for you, over WhatsApp, Slack, or the web." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://agentic-scheduling-landing.vercel.app/" />
+<meta property="og:title" content="Agentic Scheduling" />
+<meta property="og:description" content="All your calendars, run by an AI agent you can text. Free, open source, and your data stays local." />
+<meta property="og:image" content="https://agentic-scheduling-landing.vercel.app/assets/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="All your calendars, run by an AI agent you can text. Free and open source." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Agentic Scheduling" />
+<meta name="twitter:description" content="All your calendars, run by an AI agent you can text. Free, open source, and your data stays local." />
+<meta name="twitter:image" content="https://agentic-scheduling-landing.vercel.app/assets/og.png" />
+<meta name="theme-color" content="#f8fafc" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cpath d='M14 2 L17 11 L26 14 L17 17 L14 26 L11 17 L2 14 L11 11 Z' fill='%23d97706'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --stroke: #e5e7eb;
+    --ink: #0f172a;
+    --ink-2: #556075;
+    --accent: #d97706;
+    --accent-soft: #fef3c7;
+    --work: #EA4335;
+    --personal: #34A853;
+    --school: #0078D4;
+    --ok: #16a34a;
+    --navy: #1f2937;
+    --radius: 16px;
+    --maxw: 1060px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, .btn:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+  .skip {
+    position: absolute; left: 16px; top: -60px; z-index: 10;
+    background: var(--navy); color: #fff; padding: 10px 16px; border-radius: 8px;
+    font-weight: 600; transition: top .15s ease;
+  }
+  .skip:focus { top: 16px; text-decoration: none; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* Frosted sticky bar: full-bleed material the content scrolls under, so the
+     nav and CTAs stay reachable down a long page. -webkit- prefix is written by
+     hand here because this file is served raw (no autoprefixer). */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    padding: 14px 0;
+    background: rgba(248,250,252,0.72);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(160%);
+    transition: box-shadow .3s ease, background .3s ease;
+  }
+  header.scrolled { box-shadow: 0 1px 0 var(--stroke), 0 10px 30px rgba(15,23,42,0.06); }
+  @media (prefers-reduced-transparency: reduce) {
+    header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+  .nav { display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--ink); }
+  .brand:hover { text-decoration: none; }
+  .spark { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); border: 1.5px solid var(--accent); display: grid; place-items: center; }
+  .nav-links { margin-left: auto; display: flex; flex-wrap: wrap; gap: 14px 22px; font-size: 15px; }
+  @media (max-width: 560px) { .nav-links { margin-left: 0; width: 100%; } }
+  .nav-links a { color: var(--ink-2); font-weight: 500; transition: color .2s ease; }
+  .nav-links a:hover { color: var(--ink); text-decoration: none; }
+
+  .hero { padding: 56px 0 28px; text-align: center; }
+  .overline { font-size: 14px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink-2); text-transform: uppercase; }
+  .overline::before { content: ""; display: block; width: 72px; height: 4px; border-radius: 2px; background: var(--accent); margin: 0 auto 14px; }
+  h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 14px auto 0; max-width: 780px; letter-spacing: -0.02em; }
+  .sub { font-size: 18px; color: var(--ink-2); max-width: 680px; margin: 18px auto 0; }
+  .formula { margin: 24px auto 0; max-width: 720px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .tag { display: inline-flex; align-items: center; gap: 7px; background: var(--card); border: 1px solid var(--stroke); border-radius: 999px; padding: 8px 15px; font-weight: 600; font-size: 15px; color: var(--ink); }
+  .tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  .cta-row .btn { min-width: 232px; justify-content: center; }
+  @media (max-width: 520px) {
+    .cta-row { flex-direction: column; align-items: center; }
+    .cta-row .btn { width: 100%; max-width: 340px; min-width: 0; }
+  }
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 12px 22px; border-radius: 999px; font-weight: 600; font-size: 16px; border: 1.5px solid transparent; transition: transform .12s ease, filter .15s ease, box-shadow .2s ease, border-color .2s ease; }
+  .btn:hover { text-decoration: none; filter: brightness(1.05); }
+  /* Respond on press — the foundation of a direct-feeling interface. */
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 4px 14px rgba(15,23,42,0.16); }
+  .btn-primary:hover { box-shadow: 0 8px 22px rgba(15,23,42,0.22); }
+  .btn-ghost { background: var(--card); color: var(--ink); border-color: var(--stroke); }
+  .btn-ghost:hover { border-color: var(--accent); }
+  .btn svg { flex: none; }
+  .live-note { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+  .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
+
+  .hero-art { margin: 44px auto 0; }
+  /* The hero art and demo are the proof — lift them off the page with a soft,
+     large shadow so they read as real screenshots, not boxed diagrams. */
+  .hero-art img { width: 100%; height: auto; display: block; border-radius: var(--radius); border: 1px solid var(--stroke); background: var(--bg); box-shadow: 0 24px 60px rgba(15,23,42,0.12); }
+
+  section { padding: 56px 0 8px; }
+  .sec-head { text-align: center; margin-bottom: 34px; }
+  h2 { font-size: clamp(24px, 3.2vw, 30px); letter-spacing: -0.02em; margin: 10px 0 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 22px; box-shadow: 0 2px 6px rgba(15,23,42,0.06); transition: transform .25s cubic-bezier(.22,.61,.36,1), box-shadow .25s ease; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(15,23,42,0.10); }
+  .card h3 { margin: 12px 0 6px; font-size: 17px; }
+  .card p { margin: 0; font-size: 15px; color: var(--ink-2); }
+  .chip-row { display: flex; gap: 6px; }
+  .chip { height: 12px; border-radius: 4px; }
+
+  .demo { padding-top: 40px; }
+  .demo img { width: 100%; height: auto; display: block; border-radius: var(--radius); border: 1px solid var(--stroke); box-shadow: 0 24px 60px rgba(15,23,42,0.12); }
+  .caption { text-align: center; font-size: 14px; color: var(--ink-2); margin-top: 10px; }
+
+  .why { max-width: 720px; margin: 0 auto; }
+  .why-card { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 30px 34px; box-shadow: 0 2px 6px rgba(15,23,42,0.06); }
+  .why-card p { margin: 0 0 16px; font-size: 16.5px; color: var(--ink); }
+  .why-card p:last-child { margin-bottom: 0; }
+  .sig { color: var(--ink-2); font-size: 15px; }
+  .sig a { font-weight: 600; }
+
+  footer { margin-top: 64px; border-top: 1px solid var(--stroke); padding: 28px 0 40px; }
+  .foot { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: center; font-size: 14.5px; color: var(--ink-2); }
+  .foot a { color: var(--ink-2); font-weight: 500; }
+  .foot a:hover { color: var(--ink); }
+  .foot .mit { margin-left: auto; color: var(--ink-2); }
+
+  /* Entrance motion — content eases up into place as it enters, with a small
+     per-element stagger (--i). Gated behind `html.motion`, which the inline
+     script only adds when the visitor hasn't asked to reduce motion; without it
+     everything is simply visible, so the page is fully usable with JS off or
+     reduced motion on. */
+  html.motion .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .7s cubic-bezier(.22,.61,.36,1), transform .7s cubic-bezier(.22,.61,.36,1);
+    transition-delay: calc(var(--i, 0) * 65ms);
+    will-change: opacity, transform;
+  }
+  html.motion .reveal.in { opacity: 1; transform: none; }
+  /* Cards fade + rise together (no stagger) with one snappy, delay-free timing,
+     so their hover lift stays immediate — the entrance and the hover animate the
+     same `transform`, so they must share a transition rather than the slow .7s
+     reveal one, which would make the hover sluggish and snap the shadow. */
+  html.motion .card.reveal {
+    transition: opacity .5s ease, transform .3s cubic-bezier(.22,.61,.36,1), box-shadow .25s ease;
+    transition-delay: 0s;
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+<header>
+  <div class="wrap">
+    <nav class="nav">
+      <a class="brand" href="/">
+        <span class="spark">
+          <svg width="18" height="18" viewBox="0 0 28 28"><path d="M14 2 L17 11 L26 14 L17 17 L14 26 L11 17 L2 14 L11 11 Z" fill="#d97706"/></svg>
+        </span>
+        Agentic Scheduling
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#why">Why I built it</a>
+        <a href="https://github.com/hunterZh37/agentic-scheduling">GitHub</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap">
+    <div class="overline reveal" style="--i:0">Free, open source, self-hosted</div>
+    <h1 class="reveal" style="--i:1">All your calendars, run by an AI agent you can text</h1>
+    <p class="sub reveal" style="--i:2">
+      Stop cross-referencing calendars to find a free slot, this agent syncs them all,
+      checks availability, and books for you 24/7
+    </p>
+    <div class="formula reveal" style="--i:3">
+      <span class="tag"><span class="dot"></span>Free</span>
+      <span class="tag"><span class="dot"></span>No Calendly setup</span>
+      <span class="tag"><span class="dot"></span>Google Calendar UI</span>
+      <span class="tag"><span class="dot"></span>A 24/7 agent</span>
+      <span class="tag"><span class="dot"></span>Data stays local</span>
+    </div>
+    <div class="cta-row reveal" style="--i:4">
+      <a class="btn btn-primary" href="https://github.com/hunterZh37/agentic-scheduling">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="#fff"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Star on GitHub
+      </a>
+      <a class="btn btn-ghost" href="https://bookwithhunter.com/book">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        Book time with me
+      </a>
+    </div>
+    <div class="hero-art reveal" style="--i:5">
+      <img src="assets/agent-hero.svg" alt="Three calendars (Work, Personal, School) synchronized into one platform run by an AI agent that takes a scheduling request over text and books the meeting" />
+    </div>
+  </section>
+
+  <section id="features" class="wrap">
+    <div class="sec-head reveal">
+      <div class="overline">Features</div>
+      <h2>A scheduler, plus an agent who runs it</h2>
+    </div>
+    <div class="grid">
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--work)"></span>
+          <span class="chip" style="width:26px;background:var(--personal)"></span>
+          <span class="chip" style="width:30px;background:var(--school)"></span>
+        </div>
+        <h3>All your calendars, one UI</h3>
+        <p>Every Google and Outlook account in one Google Calendar-style view: events, bookings, time blocks</p>
+      </div>
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--accent)"></span>
+          <span class="chip" style="width:26px;background:var(--accent-soft);border:1px solid var(--accent)"></span>
+        </div>
+        <h3>Text your agent to book</h3>
+        <p>Text your agent the when and where instead of clicking, it never mistakes AM for PM</p>
+      </div>
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--navy)"></span>
+          <span class="chip" style="width:26px;background:var(--stroke)"></span>
+        </div>
+        <h3>Visitors just ask if you're free</h3>
+        <p>They just ask "free on Tuesday?" and the agent replies with open slots, then books their pick</p>
+      </div>
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--school)"></span>
+          <span class="chip" style="width:26px;background:var(--stroke)"></span>
+          <span class="chip" style="width:22px;background:var(--stroke)"></span>
+        </div>
+        <h3>A Calendly-style booking page</h3>
+        <p>Visitors only see slots open across every calendar, rechecked at booking time so nothing double-books</p>
+      </div>
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--ok)"></span>
+          <span class="chip" style="width:26px;background:var(--personal)"></span>
+        </div>
+        <h3>WhatsApp and email reminders</h3>
+        <p>You and your attendees get meeting reminders, with retries so a failed send is never dropped</p>
+      </div>
+      <div class="card reveal">
+        <div class="chip-row">
+          <span class="chip" style="width:34px;background:var(--personal)"></span>
+          <span class="chip" style="width:26px;background:var(--work)"></span>
+        </div>
+        <h3>Your agent, in your chats</h3>
+        <p>Invite it to WhatsApp or Slack to create, move, or cancel meetings over text, and get instant booking alerts</p>
+      </div>
+    </div>
+
+    <div class="demo reveal">
+      <img src="assets/demo.gif" alt="Demo tour: each feature captioned, then shown" loading="lazy" />
+      <p class="caption">The tour: dashboard, agent-by-text, booking page, reminders, chats, and a Chrome extension for any Calendly page.</p>
+    </div>
+  </section>
+
+  <section id="why" class="wrap">
+    <div class="sec-head reveal">
+      <div class="overline">Why I built it</div>
+      <h2>Juggling almost ten calendars was eating my head</h2>
+    </div>
+    <div class="why">
+      <div class="why-card reveal">
+        <p>
+          I juggle almost ten calendars, so when someone asks when I'm free, cross-referencing
+          all of them for a time that works burns real time and mental energy
+        </p>
+        <p>
+          And adding events by hand, I kept mistaking AM for PM. Those little frustrations are
+          why I built this: an agent that watches every calendar, answers availability, and
+          books end to end
+        </p>
+        <p>
+          It's free and open source, syncs all your calendars, runs 24/7, and keeps your data
+          on your own deployment. I use it for every meeting, so
+          <a href="https://bookwithhunter.com/book">book a time with me</a> and you'll be
+          talking to it
+        </p>
+        <p class="sig">
+          Hunter Zhang, <a href="https://hunterzhangconsulting.com">hunterzhangconsulting.com</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <a href="https://github.com/hunterZh37/agentic-scheduling">GitHub</a>
+    <a href="https://bookwithhunter.com/book">Book time with me</a>
+    <a href="https://hunterzhangconsulting.com">Consulting</a>
+    <span class="mit">MIT licensed. Built by Hunter Zhang.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Progressive enhancement: only opt into entrance motion when the visitor
+  // hasn't asked to reduce it. Without `html.motion`, .reveal elements have no
+  // hidden state, so the page is fully visible with JS off or reduced motion on.
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduce) {
+    document.documentElement.classList.add("motion");
+    var reveals = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            io.unobserve(e.target);
+          }
+        });
+      }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+      reveals.forEach(function (el) { io.observe(el); });
+    } else {
+      reveals.forEach(function (el) { el.classList.add("in"); });
+    }
+  }
+
+  // Sticky nav gains a soft shadow once the page has scrolled under it.
+  var header = document.querySelector("header");
+  if (header) {
+    var onScroll = function () { header.classList.toggle("scrolled", window.scrollY > 8); };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+})();
+</script>
+
+</body>
+</html>

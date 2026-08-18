@@ -1,0 +1,99 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/* Base reset/layer. Visual values come from tokens.css — never hardcode a
+   color, size, radius, shadow, or duration that exists as a token. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  font-weight: var(--w-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* All times/dates use tabular figures. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect reduced motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Visible keyboard focus (quality floor). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Suppress the default translucent-gray tap rectangle on iOS Safari for
+   primary tap targets. WebKit-only touch behavior; no effect on desktop. */
+button,
+a,
+[role="button"],
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Directness (Apple's first principle): a control acknowledges the press the
+   instant it lands, then settles back — not on release. Scoped to real
+   <button> elements (compact controls: chips, tabs, icon buttons, the send
+   button) so wide list rows keep their own highlight instead of scaling.
+   Transform-only (compositor-friendly); the global reduced-motion guard above
+   makes it snap instantly rather than animate. */
+button:not(:disabled) {
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+button:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+/* On phones, iOS Safari auto-zooms when a text field with font-size < 16px is
+   focused. The app's inputs use 14–15px tokens, so bump text-entry controls to
+   16px at phone widths to prevent that jarring zoom. (Native date/time pickers
+   are left alone — they open a picker rather than an inline caret.) */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input[type="password"],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,8 @@
+# These are supported funding model platforms
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+# Enables the native "Sponsor" button on the repo page. Requires GitHub
+# Sponsors to actually be turned on for this account (Settings → Sponsorships)
+# for the link to resolve — add ko_fi/patreon/custom below once you have
+# accounts on those, this only lists what's real today.
+github: [hunterZh37]

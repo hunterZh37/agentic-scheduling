@@ -1,0 +1,260 @@
+// Agentic Scheduling — data model
+// All timestamps are stored in UTC. Convert only at display.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Runtime connections use the pooled URL (PgBouncer) on serverless.
+  url      = env("DATABASE_URL")
+  // Migrations (prisma migrate deploy) need a direct, unpooled connection —
+  // PgBouncer's transaction pooling can't run them. Locally, point DIRECT_URL
+  // at the same Docker DB as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+enum Provider {
+  google
+  microsoft
+}
+
+enum AuthMethod {
+  delegation
+  oauth
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled
+}
+
+enum CreatedVia {
+  public_link
+  public_agent
+  private_agent
+}
+
+enum ReminderChannel {
+  email
+  sms
+  push
+  whatsapp
+}
+
+// Who a reminder is for. Extension beyond the minimal handoff model: bookings
+// schedule reminders for BOTH the owner and the attendee, so we must distinguish
+// the recipient when the cron worker renders + routes each reminder.
+enum ReminderRecipient {
+  hunter
+  attendee
+}
+
+/// A connected calendar account. One row per account regardless of whether it
+/// was authorized via domain-wide delegation or per-account OAuth — the
+/// aggregator does not care how a given account was authorized.
+model Account {
+  id           String     @id @default(cuid())
+  provider     Provider
+  email        String     @unique
+  // Token set — null until the account is authorized (phase 2). For delegation
+  // accounts these may stay null (tokens minted per-call from the SA key).
+  accessToken  String?
+  refreshToken String?
+  expiry       DateTime?
+  authMethod   AuthMethod
+  // Whether the aggregator includes this account in free/busy conflict checks.
+  checkForConflicts Boolean @default(true)
+  // Whether new bookings are written here. At most one should be true; the
+  // effective destination is also mirrored in Settings.destinationEmail.
+  isDestination Boolean   @default(false)
+  // Friendly label shown in the Calendars manager and legend; defaults to the
+  // email when null.
+  displayName  String?
+  // Whether this account's events are shown in the merged calendar (toggled
+  // from the Calendars manager). Color stays the account's stable identity.
+  visible      Boolean   @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  bookings     Booking[]  @relation("DestinationBookings")
+}
+
+/// The owner's manually reserved time (sleep, gym, grocery). Treated as busy by
+/// the aggregator exactly like a real calendar event. Recurrence is first class.
+model PersonalBlock {
+  id             String   @id @default(cuid())
+  title          String
+  startTime      DateTime // UTC. For recurring blocks this is the anchor occurrence.
+  endTime        DateTime // UTC.
+  // IANA timezone the block is authored in. Recurrence expands against local
+  // wall-clock in this zone so e.g. "23:00 daily" holds across DST.
+  timezone       String   @default("America/New_York")
+  recurrenceRule String?  // iCal RRULE string, e.g. "FREQ=DAILY". Null = one-off.
+  // Whether the block has been crossed off ("done") in the Blocks pane. Persists
+  // the checkbox so the struck-through state survives a refresh, mirroring Todo.
+  done           Boolean  @default(false)
+  // Whether this block's occurrences are shown on the calendar day-grid and
+  // merged Today agenda (toggled from the Blocks pane). The block itself stays
+  // listed in the Reserved time manager either way, mirroring Account.visible.
+  visible        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+/// A crossed-off ("done") mark for an agenda item that has no DB row of its own
+/// — a calendar event or a booking occurrence in the Blocks pane's Today agenda.
+/// Keyed by the agenda item key (e.g. "event:<providerId>", "booking:<id>").
+/// A row's mere presence means "done"; un-checking deletes it. Blocks and todos
+/// don't use this — they persist `done` on their own models.
+model Checkoff {
+  key       String   @id
+  createdAt DateTime @default(now())
+}
+
+/// A follow-up actionable attached to a single event occurrence. `eventKey` uses
+/// the SAME format as a Checkoff key — "event:<providerEventId>:<startISO>" — so
+/// each occurrence of a recurring event carries its own list. Local-only; never
+/// synced to the provider calendar.
+model EventFollowup {
+  id        String   @id @default(cuid())
+  eventKey  String
+  title     String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([eventKey])
+}
+
+/// A day-level to-do (e.g. "Take melatonin", "Buy groceries"), rendered atop
+/// the Today agenda. Not tied to any event or block — just a plain checklist
+/// scoped to a calendar day. Optionally carries a time range (both set or
+/// both null) so a to-do can slot into the Today agenda's timeline instead of
+/// staying pinned at the top. Also optionally carries a "where" — at most one
+/// of an in-person location, an online meeting link, or a phone number for a
+/// call — but this isn't enforced server-side; the client only ever sets one.
+model Todo {
+  id        String    @id @default(cuid())
+  title     String
+  done      Boolean   @default(false)
+  date      DateTime  // The calendar day this belongs to (day's start, UTC).
+  startTime DateTime? // UTC. Null = untimed. Set together with endTime.
+  endTime   DateTime? // UTC. Null = untimed. Must be after startTime.
+  location  String?   // In-person location, e.g. "123 Main St".
+  videoLink String?   // Online meeting URL, e.g. a Zoom/Meet link.
+  phone     String?   // Phone number for a call.
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  // Carry-forward: when an actionable is left unfinished, the next day's copy
+  // records the id of the todo it was cloned from. `@unique` is the idempotency
+  // guard — a given source can be carried at most once, so a re-run (double
+  // load, cron retry) can never create a second copy. Null = an ordinary todo,
+  // not carried from anything. A non-null value also drives the "carried over"
+  // marker in the UI. Postgres allows many NULLs under a unique index.
+  rolledFromId String? @unique
+
+  @@index([date])
+}
+
+/// A confirmed (or cancelled) booking written to a destination account.
+model Booking {
+  id               String        @id @default(cuid())
+  title            String
+  startTime        DateTime      // UTC.
+  endTime          DateTime      // UTC.
+  attendeeName     String
+  attendeeEmail    String
+  attendeeTimezone String        // IANA tz, e.g. "America/New_York".
+  destinationAccountId String
+  destinationAccount   Account   @relation("DestinationBookings", fields: [destinationAccountId], references: [id])
+  // Provider-side event id for the calendar entry written on booking (phase 4).
+  externalEventId  String?
+  status           BookingStatus @default(confirmed)
+  createdVia       CreatedVia
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  reminders        Reminder[]
+}
+
+/// A scheduled reminder for a booking. The cron worker fires due reminders.
+model Reminder {
+  id        String            @id @default(cuid())
+  bookingId String
+  booking   Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  recipient ReminderRecipient
+  fireAt    DateTime          // UTC.
+  channel   ReminderChannel
+  sentAt    DateTime?         // Null until sent.
+  // Delivery bookkeeping so a permanently-failing reminder can't starve the
+  // queue. attempts counts dispatch tries; failedAt marks the row terminally
+  // dead-lettered (set after MAX_ATTEMPTS, or immediately on a non-retryable
+  // error) so it drops out of the due query instead of being retried forever.
+  attempts  Int               @default(0)
+  failedAt  DateTime?
+  createdAt DateTime          @default(now())
+
+  // Due query filters sentAt IS NULL AND failedAt IS NULL AND fireAt <= now.
+  @@index([sentAt, failedAt, fireAt])
+}
+
+/// A rolling SMS conversation with the agent, keyed by the sender's phone
+/// number. SMS is stateless, so we persist a short history (last ~12 turns,
+/// trimmed on write) to give the private agent multi-turn continuity. Only
+/// The owner's number is ever allowed to reach this — see the inbound webhook.
+model SmsConversation {
+  id        String   @id @default(cuid())
+  phone     String   @unique // E.164, normalized.
+  messages  Json     // ChatMessage[] — [{ role, content }, ...].
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+/// Singleton configuration row. Guarded by a fixed id.
+model Settings {
+  id                          String @id @default("singleton")
+  destinationEmail            String @default("owner@example.com")
+  bookingHorizonDays          Int    @default(60)
+  minNoticeHours              Int    @default(2)
+  bufferMinutes               Int    @default(0)
+  defaultEventDurationMinutes Int    @default(30)
+  // Reminder lead times in minutes before a booking, scheduled for both the
+  // owner and the attendee. Fully customizable. Default: 24h + 1h.
+  reminderOffsetsMinutes      Int[]  @default([1440, 60])
+  // The app-login password, PBKDF2-hashed (see src/lib/auth/password.ts). Null
+  // until the owner sets a custom password in-app; login then falls back to the
+  // APP_PASSWORD env var, then to PRIVATE_AUTH_SECRET. Never the plaintext.
+  passwordHash                String?
+  updatedAt                   DateTime @updatedAt
+}
+
+model Birthday {
+  id        String   @id @default(cuid())
+  name      String
+  month     Int      // 1–12
+  day       Int      // 1–31 (29 allowed for Feb — leap-day birthdays)
+  year      Int?     // optional birth year → age display
+  createdAt DateTime @default(now())
+
+  @@index([month, day])
+}
+
+model Nudge {
+  id             String    @id @default(cuid())
+  body           String
+  fireAt         DateTime  // UTC — next occurrence's fire time
+  timezone       String    @default("America/New_York")
+  recurrenceRule String?   // iCal RRULE body; null = one-off
+  eventKind      String?   // "event" | "booking"
+  eventId        String?
+  eventAccount   String?   // account email (events only)
+  eventDate      DateTime? // linked event's day (UTC), the window to re-fetch
+  sentAt         DateTime?
+  attempts       Int       @default(0)
+  failedAt       DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([sentAt, failedAt, fireAt])
+}

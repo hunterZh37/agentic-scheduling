@@ -1,0 +1,362 @@
+.window {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 372px minmax(300px, 380px);
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  box-shadow: var(--e3);
+}
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.calendarPane {
+  border-right: 1px solid var(--hairline);
+}
+.blocksPane {
+  border-right: 1px solid var(--hairline);
+}
+
+.calendarBody {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Calendars legend footer */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--type-caption);
+  color: var(--text-2);
+}
+.legendLabel {
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  margin-right: var(--space-1);
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--type-caption);
+  cursor: pointer;
+  padding: 0;
+}
+.legendLabel:hover {
+  color: var(--text-1);
+}
+/* Disclosure affordance on the CALENDARS label. */
+.legendChevron {
+  margin-left: 4px;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* Collapsed state: just the account colours and a count. Keeps the legend's
+   real job (which colour is which calendar) while the addresses stay private
+   until asked for. */
+.legendDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+.legendDots:hover {
+  background: var(--surface-sunken);
+}
+.legendCount {
+  margin-left: 2px;
+  color: var(--text-3);
+  font-size: var(--type-caption);
+}
+/* Opens the public booking page in a new tab so the owner can preview what a
+   visitor sees. Its margin-left:auto absorbs the row's free space and pushes
+   it (and the adjacent Manage button) to the right edge as a pair. */
+.preview {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.preview:hover {
+  color: var(--text-1);
+}
+.manage {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+/* Small, unobtrusive trigger for the BirthdaysManager modal, grouped with the
+   other right-aligned legend affordances. */
+.birthdays {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.birthdays:hover {
+  color: var(--text-1);
+}
+/* Small, unobtrusive trigger for the RemindersManager modal, grouped with
+   the other right-aligned legend affordances. */
+.reminders {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.reminders:hover {
+  color: var(--text-1);
+}
+/* "Synced X ago" indicator — click to force a pull from all calendars. */
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: var(--type-caption);
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.sync:hover {
+  color: var(--text-1);
+}
+.syncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: #34c759;
+  flex: none;
+}
+.syncWarn {
+  color: var(--state-warning);
+}
+.syncWarn .syncDot {
+  background: var(--state-warning);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+}
+.legendReserved {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px dashed rgba(120, 120, 128, 0.55);
+  background: repeating-linear-gradient(45deg, rgba(120, 120, 128, 0.14) 0 4px, transparent 4px 8px);
+}
+
+/* Mobile-only bottom tab bar. Hidden on desktop (display:none takes no grid
+   track, so the desktop 3-column grid still maps its three panes 1:1). */
+.tabBar {
+  display: none;
+}
+
+/* --- Phone / small tablet: single pane + bottom tab bar --- */
+@media (max-width: 768px) {
+  .window {
+    /* Swap the 3-column grid for a vertical flex stack: the active pane fills
+       the space and the tab bar pins to the bottom. Full-bleed (no radius /
+       shadow / border) for a native-app feel. */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Only the active tab's pane is shown; the rest are removed from layout. */
+  .pane {
+    display: none;
+    flex: 1;
+    min-height: 0;
+  }
+  .paneActive {
+    display: flex;
+  }
+  /* Slide the incoming pane in from the side the swipe/tap came from. The
+     animation restarts each time a pane flips from display:none to flex, so a
+     fresh switch always plays. Kept subtle (24px + fade) so it reads as a
+     transition, not a full page slide. Window overflow:hidden clips the offset
+     so no horizontal scrollbar appears mid-animation. */
+  .paneActive.enterNext {
+    animation: paneInNext var(--dur-slow) var(--ease-spring);
+  }
+  .paneActive.enterPrev {
+    animation: paneInPrev var(--dur-slow) var(--ease-spring);
+  }
+  .calendarPane,
+  .blocksPane {
+    border-right: none;
+  }
+
+  .tabBar {
+    display: flex;
+    flex-shrink: 0;
+    border-top: 1px solid var(--hairline);
+    /* Translucent chrome, like an iOS tab bar: a frosted material rather than a
+       solid strip, so overscrolled content tints through it. Standard property
+       only — Lightning CSS adds the -webkit- prefix; writing it by hand makes
+       the build drop both. */
+    background: var(--material-chrome);
+    backdrop-filter: blur(20px) saturate(180%);
+    /* A soft upward shadow lifts the bar off the content it floats over, so it
+       reads as chrome on top rather than a strip glued to the bottom edge. */
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.16);
+    /* Clear the iOS home-indicator / gesture area. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    /* Comfortable touch target (>= 44px tall). */
+    min-height: 52px;
+    padding: var(--space-2) 0;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: var(--type-caption);
+    font-weight: 500;
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-standard);
+  }
+  .tabIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .tabActive {
+    color: var(--accent);
+  }
+
+  /* The per-account legend rows wrap into a tall block on a phone; drop them and
+     keep just the compact CALENDARS label + Manage button so the calendars
+     manager stays reachable (tile colors are self-evident without the key). */
+  .legendItem {
+    display: none;
+  }
+  .legend {
+    padding: var(--space-2) var(--space-4);
+  }
+}
+
+/* A physical settle, not a full page slide: the incoming pane arrives from the
+   gesture's side with a little momentum (the --ease-spring overshoot) and a
+   faint scale-up, so switching tabs feels like the content springs into place
+   rather than sliding on rails. */
+@keyframes paneInNext {
+  from {
+    opacity: 0;
+    transform: translateX(26px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes paneInPrev {
+  from {
+    opacity: 0;
+    transform: translateX(-26px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Honor reduced-motion: the pane still swaps, just without the slide. */
+@media (prefers-reduced-motion: reduce) {
+  .paneActive.enterNext,
+  .paneActive.enterPrev {
+    animation: none;
+  }
+}
+
+/* Frostier, opaque chrome for anyone who asked the system to reduce
+   transparency — legibility over material. */
+@media (prefers-reduced-transparency: reduce) {
+  .tabBar {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+
+/* Panes fade in, lightly staggered, on first load — the same entrance motion
+   the marketing pages use, brought into the dashboard. Desktop only: on a phone
+   just one pane shows and it already animates on tab switch. Gated on
+   html.motion-ok (set before paint only when motion is allowed), so reduced
+   motion and no-JS simply show the panes. Opacity only, deliberately — a
+   transform here would become a containing block over the agent pane's
+   position:absolute glass header and composer. */
+@media (min-width: 769px) {
+  :global(html.motion-ok) .calendarPane {
+    animation: paneReveal 0.5s var(--ease-standard) both;
+  }
+  :global(html.motion-ok) .blocksPane {
+    animation: paneReveal 0.5s var(--ease-standard) 0.07s both;
+  }
+  :global(html.motion-ok) .agentPane {
+    animation: paneReveal 0.5s var(--ease-standard) 0.14s both;
+  }
+}
+@keyframes paneReveal {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(html.motion-ok) .calendarPane,
+  :global(html.motion-ok) .blocksPane,
+  :global(html.motion-ok) .agentPane {
+    animation: none;
+  }
+}

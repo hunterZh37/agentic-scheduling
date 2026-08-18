@@ -1,0 +1,23 @@
+.main {
+  height: 100vh;
+  padding: var(--space-5);
+  background: var(--bg-canvas);
+}
+
+/* Tablet: trim the canvas padding but keep the desktop three-pane. */
+@media (max-width: 980px) {
+  .main {
+    padding: var(--space-3);
+  }
+}
+
+/* Phone / small tablet: the workspace goes full-bleed and switches to a
+   single-pane + tab-bar layout (see ThreePane.module.css). Use dynamic
+   viewport height (100dvh) so the browser's URL bar and on-screen keyboard
+   don't clip the bottom tab bar or the agent composer. */
+@media (max-width: 768px) {
+  .main {
+    height: 100dvh;
+    padding: 0;
+  }
+}
