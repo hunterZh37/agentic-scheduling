@@ -1,0 +1,48 @@
+{
+  "name": "agentic-scheduling",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma migrate deploy && prisma generate && next build",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "db:seed": "tsx prisma/seed.ts",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
+    "smoke": "node scripts/smoke.mjs",
+    "verify": "tsc --noEmit && vitest run && node scripts/smoke.mjs",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "audit:mobile": "node scripts/mobile-audit.mjs",
+    "test:messaging": "node scripts/messaging-live-test.mjs"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
+    "@prisma/client": "^6.19.3",
+    "luxon": "^3.7.2",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "rrule": "^2.8.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/luxon": "^3.7.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

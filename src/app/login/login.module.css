@@ -1,0 +1,167 @@
+.wrap {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-canvas);
+  padding: var(--space-4, 16px);
+}
+
+.card {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--radius-lg, 14px);
+  padding: 28px 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.sub {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+.input {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 15px;
+  color: var(--text-1);
+  background: var(--surface-sunken);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 10px);
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent);
+}
+
+.button {
+  width: 100%;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+}
+.button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.visitor {
+  margin: var(--space-4) 0 0;
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+  text-align: center;
+}
+.visitor a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.visitor a:hover {
+  text-decoration: underline;
+}
+.legal {
+  margin: var(--space-2) 0 0;
+  font-size: var(--type-caption);
+  color: var(--text-3, var(--text-2));
+  text-align: center;
+}
+.legal a {
+  color: inherit;
+  text-decoration: none;
+}
+.legal a:hover {
+  text-decoration: underline;
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: #ff453a;
+}
+
+/* --- Phone: give the footer links a real touch target. Measured at 15px tall
+   with device emulation, well under the 44px minimum. The links stay visually
+   the same size; only the hit area grows. --- */
+@media (max-width: 768px) {
+  .visitor a,
+  .legal a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+  }
+  /* The password field must be >=16px or iOS zooms in on focus. */
+  .input {
+    font-size: 16px;
+  }
+}
+
+/* Primary sign-in path, so it leads the form and the password sits below a
+   divider as the fallback. */
+.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-body);
+  font-weight: 600;
+  text-decoration: none;
+}
+.google:hover {
+  background: var(--surface-sunken);
+}
+/* Reveals the collapsed password fallback. Deliberately quiet — plain text,
+   no button chrome — so it reads as the secondary path next to the Google
+   button without competing with it. */
+.altLink {
+  align-self: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-3, var(--text-2));
+  font-size: var(--type-footnote);
+  cursor: pointer;
+}
+.altLink:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  color: var(--text-3);
+  font-size: var(--type-caption);
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}

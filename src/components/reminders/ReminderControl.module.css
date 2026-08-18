@@ -1,0 +1,405 @@
+/* Small anchored bell + popover — not a full-screen modal (see
+   BirthdaysManager/CalendarsManager for that pattern). */
+.wrap {
+  position: relative;
+  /* Block-level flex (not inline-flex) plus auto top/bottom margins: this is the
+     one vertical-centering that holds across engines. `align-self: center` alone
+     was measurably centered in Chrome yet rendered top-aligned in Safari (a
+     known flex quirk); auto margins absorb the free space above and below
+     equally, so the bell lands dead-centre next to the two-line title/time no
+     matter how the browser handles align-* on this item. */
+  display: flex;
+  align-items: center;
+  align-self: center;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* Inline mode (event modal): bell + label on one line, the reminders list wraps
+   to the next line and spans the full width. */
+.wrapInline {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  width: 100%;
+}
+.inlineLabel {
+  color: var(--text-2);
+  font-size: var(--type-callout);
+}
+.inlineList {
+  flex-basis: 100%;
+  width: 100%;
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.inlineRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+.inlineWhen {
+  color: var(--text-1);
+  font-size: var(--type-callout);
+}
+
+/* Compact one-line mode (Blocks agenda): bell + reminder time chips on a single
+   row, no label. */
+.wrapCompact {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+.compactChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--space-2);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+.compactWhen {
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  white-space: nowrap;
+}
+
+.bell {
+  /* Centre the glyph the way the checkbox does (grid place-items) rather than
+     flex — the checkbox renders correctly aligned in the agenda row, so matching
+     its centering mechanism keeps the bell on the same vertical line across
+     browsers. */
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.bell:hover {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+}
+.bellActive {
+  color: var(--accent);
+  background: var(--accent-tint);
+}
+.bellActive:hover {
+  background: var(--accent-tint);
+}
+
+/* Backdrop + centered panel, portaled to <body> so it's never clipped by the
+   event modal / agenda scroll containers (which create their own containing
+   block via transforms/overflow). Above the event modal (z-index ~50). */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70; /* above the event modal overlay (z-index 60) it can open from */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.35);
+}
+.popover {
+  width: min(320px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e3);
+  animation: rise var(--dur-base) var(--ease-emphasized);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+
+/* --- Presets --- */
+.presetsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.presetChip {
+  border: none;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  color: var(--text-2);
+  font-size: var(--type-caption);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.presetChip:hover {
+  color: var(--text-1);
+}
+.presetChipActive {
+  background: var(--accent);
+  color: #fff;
+}
+.presetChipActive:hover {
+  color: #fff;
+}
+.presetChip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.presetChip:disabled:hover {
+  color: var(--text-2);
+}
+
+/* --- Custom time + submit --- */
+.customInput {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-footnote);
+  /* A native datetime-local has an intrinsic minimum width from its own
+     "mm/dd/yyyy, --:-- --" text plus the picker icon, and width:100% cannot
+     shrink it below that. In the narrow panel it therefore spilled past the
+     card's right edge and got clipped. min-width:0 lets it shrink; max-width
+     keeps it inside the padding box whatever the platform renders. */
+  min-width: 0;
+  max-width: 100%;
+  font-family: inherit;
+}
+.customInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.remindBtn {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.remindBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--type-caption);
+  color: var(--state-cancelled);
+}
+
+/* --- This item's reminders --- */
+.list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--hairline);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-caption);
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowWhen {
+  color: var(--text-3);
+}
+.deleteBtn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+.deleteBtn:hover {
+  color: var(--state-cancelled);
+}
+
+/* --- Panel header: names the item the reminder attaches to. Without it the
+   panel opened on a bare row of lead-time chips with no stated subject. --- */
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+.eyebrow {
+  font-size: var(--type-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.headTitle {
+  font-size: var(--type-callout);
+  font-weight: 600;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.headWhen {
+  font-size: var(--type-caption);
+  color: var(--text-2);
+}
+
+/* Labels the datetime field and marks it as the alternative to the chips. */
+.fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--type-caption);
+  color: var(--text-2);
+}
+
+/* Resolves the chosen lead time into a real date and time before committing. */
+.preview {
+  margin: 0 0 var(--space-2);
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.preview strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+.previewPast {
+  color: var(--state-cancelled);
+}
+
+.listHead {
+  margin-bottom: var(--space-1);
+  font-size: var(--type-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* --- Phone: the reminder panel becomes a bottom sheet ---------------------
+   A 320px card floating in the middle of the screen is a desktop idiom: on a
+   phone it lands away from the thumb and its controls were all built at
+   pointer sizes (26px bell, ~24px chips, 13px date field that makes iOS zoom
+   in on focus and never zoom back out). Below the breakpoint it becomes a
+   sheet anchored to the bottom edge, with every control at a real touch size. */
+@media (max-width: 768px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .popover {
+    width: 100%;
+    max-height: 85vh;
+    padding: var(--space-4);
+    /* Clear the home indicator on gesture-nav phones. */
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    animation: sheetUp var(--dur-base) var(--ease-emphasized);
+  }
+  /* Grab handle — signals the sheet is dismissable. */
+  .popover::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--hairline-strong);
+  }
+
+  /* The bell that opens all this. 26px is a pointer target, not a thumb one.
+     Left alone in compact mode, where it is an indicator rather than a
+     control and sits inline with the reminder time. */
+  /* Agenda-row bell: match the row's other icon controls (28px) instead of
+     towering at 44px, which made it read as sitting higher than the checkbox. */
+  .wrap .bell {
+    width: 28px;
+    height: 28px;
+  }
+  .wrapInline .bell {
+    width: 44px;
+    height: 44px;
+  }
+
+  .presetChip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--space-4);
+    font-size: var(--type-footnote);
+  }
+
+  /* Height only. Font size is deliberately left to globals.css, which bumps
+     text-entry controls to 16px on phones but exempts native date/time
+     pickers — they open a picker rather than an inline caret, so there is no
+     zoom to prevent, and forcing 16px here only widened the control (see the
+     min-width note on .customInput). */
+  .customInput {
+    min-height: 44px;
+  }
+
+  .remindBtn {
+    min-height: 48px;
+    font-size: var(--type-body);
+  }
+
+  /* Only the delete buttons inside the sheet's list — the compact indicator's
+     × stays small so it doesn't inflate the agenda row. */
+  .list .row {
+    min-height: 44px;
+  }
+  .list .deleteBtn {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 20px;
+  }
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover {
+    animation: none;
+  }
+}

@@ -1,0 +1,115 @@
+#!/bin/sh
+# Blocks a push whose code doesn't typecheck, whose tests fail, or whose UI
+# breaks at phone viewports.
+#
+# Deliberately does NOT run `npm run smoke`. Smoke checks the CURRENTLY DEPLOYED
+# site, not the code being pushed — gating on it would block the one push that
+# matters most, the fix for a production outage, because production is broken.
+# Smoke is what you run AFTER the deploy goes live.
+#
+# The mobile audit is different: layout is a property of the CODE, so it runs
+# against a local server and is meaningful before the push. It only runs when
+# something that can affect layout changed, because it costs ~40s.
+#
+# Installed via `git config core.hooksPath .githooks` (see npm run hooks:install).
+# Genuine emergency escape hatch: git push --no-verify
+
+set -e
+
+printf '\n\033[1mpre-push\033[0m\n\n'
+
+# tsc reads .next/types, where a file-sync tool leaves numbered duplicates
+# ("routes.d 2.ts", "routes.d 3.ts", ...). They are build artifacts and surface
+# as phantom duplicate-identifier errors that have nothing to do with the
+# source. Match any trailing " <n>" — the first version of this only cleared
+# " 2" and a push was blocked the day " 3" appeared.
+find .next -name "* [0-9].*" -delete 2>/dev/null || true
+
+if ! npx tsc --noEmit; then
+  printf '\n\033[31mBLOCKED\033[0m  typecheck failed\n\n'
+  exit 1
+fi
+printf '  \033[32mtypecheck ok\033[0m\n'
+
+if ! npx vitest run --silent; then
+  printf '\n\033[31mBLOCKED\033[0m  tests failed\n\n'
+  exit 1
+fi
+printf '  \033[32mtests ok\033[0m\n'
+
+# --- Mobile layout ----------------------------------------------------------
+# Only when the push actually touches something that renders. Comparing against
+# origin/main covers every commit being pushed, not just the last one.
+UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+if [ -n "$UPSTREAM" ]; then
+  CHANGED=$(git diff --name-only "$UPSTREAM"...HEAD 2>/dev/null || echo "")
+else
+  CHANGED=$(git diff --name-only HEAD~1...HEAD 2>/dev/null || echo "")
+fi
+
+if printf '%s\n' "$CHANGED" | grep -qE '\.(css|tsx)$'; then
+  printf '  \033[2mUI changed - checking phone viewports\033[0m\n'
+  PORT=3123
+  npx next dev -p $PORT >/tmp/pre-push-dev.log 2>&1 &
+  DEV_PID=$!
+  # Always take the server down, however this script exits.
+  trap 'kill $DEV_PID 2>/dev/null || true' EXIT INT TERM
+
+  READY=0
+  i=0
+  while [ $i -lt 40 ]; do
+    if curl -sS -o /dev/null --max-time 2 "http://localhost:$PORT/book" 2>/dev/null; then
+      READY=1
+      break
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+
+  if [ $READY -eq 0 ]; then
+    printf '\n\033[33mSKIPPED\033[0m  dev server did not start; see /tmp/pre-push-dev.log\n'
+    printf '          run `npm run audit:mobile` yourself before relying on this push\n\n'
+  elif ! BASE="http://localhost:$PORT" node scripts/mobile-audit.mjs; then
+    printf '\n\033[31mBLOCKED\033[0m  mobile layout regression\n\n'
+    exit 1
+  fi
+fi
+
+# --- Live health ------------------------------------------------------------
+# Database, API and agent on the DEPLOYED site must be serving 200.
+#
+# Note what this can and cannot mean: it describes production as it stands right
+# now, BEFORE this push lands, so it says nothing about the code being pushed.
+# It is here to stop you layering a change onto a system that is already broken.
+# When production is down and THIS PUSH IS THE FIX, that is exactly when the
+# gate is wrong — skip it with:  SKIP_HEALTH=1 git push
+# (Prefer that over --no-verify, which also skips typecheck, tests and mobile.)
+HEALTH_URL="${HEALTH_URL:-https://bookwithhunter.com/api/health}"
+
+if [ -n "$SKIP_HEALTH" ]; then
+  printf '  \033[33mhealth check skipped\033[0m (SKIP_HEALTH set)\n'
+else
+  BODY=$(curl -sS --max-time 20 -w '\n%{http_code}' "$HEALTH_URL" 2>/dev/null || echo "\n000")
+  CODE=$(printf '%s' "$BODY" | tail -n1)
+  JSON=$(printf '%s' "$BODY" | sed '$d')
+
+  if [ "$CODE" = "200" ]; then
+    printf '  \033[32mhealth ok\033[0m  database, api, agent\n'
+  elif [ "$CODE" = "000" ]; then
+    # No network is not a reason to refuse a commit push.
+    printf '  \033[33mhealth unknown\033[0m  could not reach %s\n' "$HEALTH_URL"
+  elif [ "$CODE" = "404" ]; then
+    # The endpoint is not deployed yet — which is the case on the very push that
+    # introduces it. "Absent" is not "unhealthy", so this must not block.
+    printf '  \033[33mhealth unknown\033[0m  %s returns 404 (not deployed yet)\n' "$HEALTH_URL"
+  else
+    printf '\n\033[31mBLOCKED\033[0m  production health is %s\n' "$CODE"
+    printf '          %s\n' "$JSON"
+    printf '          If this push is the FIX for that:  \033[1mSKIP_HEALTH=1 git push\033[0m\n\n'
+    exit 1
+  fi
+fi
+
+printf '\n\033[32mpushing\033[0m\n'
+printf '  After the deploy goes live:  \033[1mnpm run smoke\033[0m\n'
+printf '  Fixed a bug? It needs a row in docs/REGRESSIONS.md and a guard.\n\n'

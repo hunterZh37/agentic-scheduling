@@ -1,0 +1,867 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  color: var(--text-1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.headerSpinner {
+  color: var(--text-3);
+}
+.headerTitle {
+  margin: 0;
+  font-size: var(--type-title3);
+  font-weight: 600;
+}
+.addBtn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--accent);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.addBtn:hover {
+  background: var(--hairline-strong);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Extra bottom room so the last row (and its reminder bell) clears the pane
+     edge / mobile tab bar instead of sitting flush against it. */
+  padding: 0 var(--space-5) var(--space-6);
+  /* When an item is scrolled into view (focus, keyboard nav), keep it clear of
+     the sticky section header rather than tucked behind it. */
+  scroll-padding-top: 44px;
+}
+
+.section {
+  margin-top: var(--space-4);
+}
+/* Frosted sticky section labels: as the list scrolls, each header pins to the
+   top and the rows blur beneath it, then the next section pushes it up. */
+.sectionHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 calc(-1 * var(--space-5));
+  padding: var(--space-2) var(--space-5);
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .sectionHead {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+.sectionTitle {
+  font-size: var(--type-title3);
+  font-weight: 600;
+  color: var(--accent);
+}
+.count {
+  font-size: var(--type-footnote);
+  color: var(--text-3);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The Today agenda gets its own bounded, vertically-scrollable region so a busy
+   day scrolls inside the list while the "Reserved time" section below stays
+   reachable. The pin at the right keeps rows clear of the scrollbar gutter. */
+.agendaList {
+  /* Flex column so the "Add an item" card can float to the TOP of the list via
+     `order`, above the existing to-dos, rather than appearing wherever it sits
+     in the DOM (between the untimed to-dos and the timed agenda). */
+  display: flex;
+  flex-direction: column;
+  max-height: 52vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-right: var(--space-2);
+}
+/* Never let a row squish inside the max-height scroll container — default flex
+   shrink would compress content and spawn a double scrollbar. */
+.agendaList > li {
+  flex-shrink: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.row:last-child {
+  border-bottom: none;
+}
+.rowChecked .rowTitle {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.checkbox {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--text-3);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.checkMark {
+  display: block;
+  color: #fff;
+}
+/* Read-only rows (e.g. a birthday) have no checkbox — this spacer keeps their
+   title lined up with checkable rows above/below without an interactive control. */
+.checkboxSpacer {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* A block row body that opens the detail panel on click. */
+.rowBodyOpen {
+  cursor: pointer;
+}
+.rowBodyOpen:hover .rowTitle {
+  color: var(--accent);
+}
+.rowTitle {
+  font-size: var(--type-body);
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Title line for Today-agenda rows, pairing the title with its category tag. */
+.rowTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.rowTitleRow .rowTitle {
+  flex: 1;
+  min-width: 0;
+}
+/* Category pill marking a Today-agenda row as an "Actionable" to-do, "Event",
+   "Reserved" block, or "Booking". Colored via inline style to match the
+   row's existing identity color (accent / account / block / confirmed). */
+.tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  line-height: 1.3;
+}
+.rowSub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.dot {
+  color: var(--text-3);
+}
+.recur {
+  font-weight: 500;
+}
+/* Marks a to-do that rolled over from an unfinished one yesterday. A quiet
+   amber nudge — visible enough to notice it slipped, not loud enough to alarm. */
+.carried {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--state-warning);
+  font-weight: 500;
+}
+.carriedIcon {
+  flex-shrink: 0;
+}
+/* Leading marker for a recurring-schedule row: same 20px footprint as
+   .bookingDot so the Recurring list aligns with Upcoming bookings, with the
+   looped-arrow icon centered inside. */
+.recurringMark {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+.confirmed {
+  color: var(--state-confirmed);
+  font-weight: 500;
+}
+
+.rowDelete {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard), color var(--dur-fast);
+}
+.row:hover .rowDelete {
+  opacity: 1;
+}
+/* Hover is a POINTER capability, not a screen size. The touch fallback below
+   was gated on max-width: 768px, so on a wide touch device — an iPad in
+   landscape, which is how this dashboard actually gets used — neither rule
+   applied: no hover to reveal it, and too wide for the phone query. The button
+   stayed at opacity 0 permanently while remaining tappable, so pressing it was
+   aiming at something invisible. */
+@media (hover: none) {
+  .rowDelete,
+  .followDel {
+    opacity: 0.6;
+  }
+}
+.rowDelete:hover {
+  color: var(--state-cancelled);
+}
+
+/* --- Follow-ups under an event row --- */
+/* Indent to line up under the event title (checkbox width + row gap). */
+.followRow {
+  list-style: none;
+  padding: 0 0 var(--space-2) calc(20px + var(--space-3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Reminder indicator ABOVE an event/booking row (reminders fire before it).
+   Same indentation as follow-ups so the reminder / item / follow-up stack lines
+   up under the item title. */
+.reminderRow {
+  list-style: none;
+  padding: var(--space-1) 0 2px calc(20px + var(--space-3));
+  display: flex;
+}
+/* No reminder set → ReminderControl (compact) renders nothing → collapse the
+   row so no empty gap or bell shows above the item. */
+.reminderRow:empty {
+  display: none;
+}
+.followItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.followCheck {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--hairline-strong);
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.followCheck[data-done="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.followTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+}
+.followTitle[data-done="true"] {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+.followTitle a {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-word;
+}
+.followDel {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  padding: 0 var(--space-1);
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
+.followItem:hover .followDel {
+  opacity: 1;
+}
+.followDel:hover {
+  color: var(--state-cancelled);
+}
+.followAddBtn {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--type-footnote);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.followAddBtn:hover {
+  color: var(--accent);
+}
+.followInput {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--type-footnote);
+  padding: var(--space-1) var(--space-2);
+  max-width: 260px;
+}
+.followInput::placeholder {
+  color: var(--text-3);
+}
+
+/* Show/hide toggle on a Reserved time row — always visible (unlike delete)
+   since its icon also communicates the block's current visibility state. */
+/* Always-visible edit (pencil) affordance on a reserved-block row. Same footprint
+   as the visibility toggle; makes "click to edit" discoverable. */
+.editBtn {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.editBtn:hover {
+  color: var(--accent);
+}
+
+.visToggle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  /* Always-visible actionable control — kept at secondary (not tertiary) so the
+     eye toggle reads clearly at rest, unlike the hover-revealed delete button. */
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.visToggle:hover {
+  color: var(--text-1);
+}
+/* A hidden block stays in the Reserved time list (so it can be re-shown) but
+   is dimmed to signal it no longer appears on the calendar or Today agenda. */
+.rowHidden .rowTitle,
+.rowHidden .rowSub,
+.rowHidden .checkbox {
+  opacity: 0.5;
+}
+
+.newBlockRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--type-body);
+  cursor: pointer;
+}
+.plus {
+  font-size: 16px;
+}
+
+.bookingDot {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--text-3);
+}
+.empty {
+  font-size: var(--type-footnote);
+  color: var(--text-3);
+  padding: var(--space-2) 0;
+  margin: 0;
+}
+
+/* Current-time marker inside the merged agenda list. Only rendered when the
+   selected day is today; ticks each minute. Red, matching the calendar grid's
+   now-line (--state-cancelled). */
+.nowRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  list-style: none;
+  border-bottom: none;
+}
+.nowDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--state-cancelled);
+}
+.nowTime {
+  flex-shrink: 0;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--state-cancelled);
+  font-variant-numeric: tabular-nums;
+}
+.nowRule {
+  flex: 1;
+  height: 2px;
+  background: var(--state-cancelled);
+  border-radius: 1px;
+}
+
+/* Apple-Reminders-style add card, rendered right below the Today to-dos,
+   above the merged agenda items. Collapsed, it's a single "+ New item" row
+   (icon + title input); focusing the title expands the type selector and
+   type-specific chip fields below it. */
+.addCard {
+  /* Float above every existing row in the agenda list (see .agendaList) so the
+     "Add an item" form is always at the top when open, not wherever it lands in
+     the DOM between the untimed to-dos and the timed agenda. */
+  order: -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.addTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.addIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+.addIcon:hover {
+  color: var(--accent);
+}
+.addTitleInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--type-body);
+  padding: 0;
+}
+.addTitleInput::placeholder {
+  color: var(--text-3);
+}
+.addTitleInput:focus {
+  outline: none;
+}
+/* Collapses the expanded card back to the quick-add row, discarding the draft. */
+.addCollapse {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 0;
+}
+.addCollapse:hover {
+  color: var(--state-cancelled);
+}
+
+.addDetails {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: calc(20px + var(--space-3));
+}
+/* Segmented Event / Actionable / Reserved Block selector — the centerpiece of
+   the card, standing in for Apple's "Add Tags" chip. */
+.itemTypeSeg {
+  display: inline-flex;
+  align-self: flex-start;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+  gap: 2px;
+}
+.itemTypeBtn {
+  border: none;
+  background: transparent;
+  padding: 5px 11px;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--text-2);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+.itemTypeBtnActive {
+  background: var(--surface);
+  box-shadow: var(--e1);
+}
+/* Event-only description, styled as a quiet second line under the title
+   (mirrors Apple Reminders' Notes field). */
+.addNotesInput {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  padding: 0;
+}
+.addNotesInput::placeholder {
+  color: var(--text-3);
+}
+.addNotesInput:focus {
+  outline: none;
+  color: var(--text-1);
+}
+/* The chip row: date / time-range / location, adapted per selected type. */
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  font-variant-numeric: tabular-nums;
+}
+/* The recurrence control, styled as a pill with a visible "Repeat" label so it
+   reads as the way to make an item repeat (not just a state that says it won't).
+   The label is muted; the select carries the value and the chevron. */
+.repeatChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.repeatLabel {
+  color: var(--text-3);
+  font-size: var(--type-footnote);
+  font-weight: 600;
+}
+.repeatSelect {
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--type-footnote);
+  cursor: pointer;
+}
+.repeatSelect:focus {
+  outline: none;
+}
+input.chip::placeholder {
+  color: var(--text-3);
+}
+input.chip:focus {
+  outline: none;
+  color: var(--text-1);
+}
+/* Start/end time inputs nested inside a .chip wrapper span — no border/background
+   of their own since the parent chip already supplies the pill. */
+.chipTimeInput {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.chipTimeInput:focus {
+  outline: none;
+  color: var(--text-1);
+}
+.todoTimeSep {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+.addError {
+  margin: 0;
+  font-size: var(--type-footnote);
+  color: var(--state-cancelled);
+}
+/* A todo's resolved "where", rendered as a clickable link when it's a video
+   link ("Join call") or phone number (tel:); plain text for a location. */
+.todoWhereLink {
+  color: var(--accent);
+  text-decoration: none;
+}
+.todoWhereLink:hover {
+  text-decoration: underline;
+}
+
+/* --- Phone: touch tweaks --- */
+@media (max-width: 768px) {
+  /* Delete is hover-revealed on desktop; touch has no hover, so keep it visible
+     (dimmed) so it stays reachable. */
+  .rowDelete,
+  .followDel {
+    opacity: 0.6;
+  }
+  /* Bigger tap target for the "New block" (+) button. */
+  .addBtn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+  /* A touch-comfortable hit area for the always-visible row controls. */
+  .visToggle,
+  .editBtn,
+  .addIcon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* The agenda item currently in progress (the now-line sits just above it). */
+.rowTitleNow {
+  font-weight: 700;
+}
+
+/* The in-progress agenda item: highlighted border card (borderColor is set
+   inline to the item's own identity color). `--now-top` is the item's real
+   progress fraction (set inline), used to place the timeline across the card. */
+.rowNow {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1.5px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding-left: var(--space-3);
+  padding-right: var(--space-3);
+}
+/* Lift the real content above the timeline hairline so text stays crisp — the
+   line passes BEHIND the checkbox and title instead of striking through them. */
+.rowNow .checkbox,
+.rowNow .rowBody {
+  position: relative;
+  z-index: 1;
+}
+
+/* The timeline drawn across the in-progress block at the current moment. */
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--now-top, 0);
+  height: 2px;
+  transform: translateY(-50%);
+  background: var(--state-cancelled);
+  opacity: 0.9;
+  z-index: 0; /* behind the row content */
+  pointer-events: none;
+}
+.nowLineDot {
+  position: absolute;
+  left: -1px;
+  top: var(--now-top, 0);
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%);
+  border-radius: var(--radius-pill);
+  background: var(--state-cancelled);
+  z-index: 2; /* the origin marker sits on top */
+  pointer-events: none;
+}
+/* Current time as a solid pill parked at the right edge (empty space), so it's
+   legible on its own instead of tinting the title text underneath. */
+.nowLineTime {
+  position: absolute;
+  right: 4px;
+  top: var(--now-top, 0);
+  transform: translateY(-50%);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--state-cancelled);
+  color: #fff;
+  font-size: var(--type-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* A failed mutation used to be indistinguishable from a successful one: the
+   row came back on reload and looked like nothing had happened. */
+.actionError {
+  margin: 0 var(--space-4) var(--space-2);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger, #e5484d) 12%, transparent);
+  color: var(--danger, #e5484d);
+  font-size: var(--type-caption);
+}
+
+/* A cancelled booking stays in the list rather than vanishing — a meeting that
+   disappears without a trace is indistinguishable from one that was never
+   made, and the owner cannot tell that an attendee cancelled. Muted so it never
+   competes with the meetings that are actually happening. It drops off on its
+   own once the slot has passed. */
+.rowCancelled .rowTitle {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+.rowCancelled .rowSub,
+.rowCancelled .bookingDot {
+  opacity: 0.55;
+}
+.cancelledTag {
+  color: var(--state-cancelled, #e5484d);
+  font-weight: 600;
+}
+
+/* Clears a cancelled booking from the list. Always visible — unlike the
+   hover-revealed ✕, this row's only remaining control should not be something
+   you have to discover, and on touch there is no hover to discover it with. */
+.rowDismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.rowDismiss:hover {
+  opacity: 1;
+  color: var(--state-cancelled, #e5484d);
+  background: var(--surface-sunken);
+}
+
+/* --- Phone: the inline "add item" card ---
+   This card is how a block, event or actionable gets created by hand, and every
+   control in it was between 18px and 32px. It is inline rather than a modal, so
+   the overlay audit missed it until the scenario was pointed at it explicitly. */
+@media (max-width: 768px) {
+  .addIcon {
+    width: 44px;
+    height: 44px;
+  }
+  .addCollapse {
+    width: 44px;
+    height: 44px;
+  }
+  .addTitleInput,
+  .chipTimeInput,
+  .chip,
+  .itemTypeBtn {
+    min-height: 44px;
+  }
+  /* The global anti-zoom rule (globals.css: select -> 16px on phones) is an
+     element selector, which the `.repeatSelect` class out-specifies — so the
+     Repeat dropdown would stay at the 13px footnote token and iOS would zoom on
+     focus. Re-assert 16px at class level, and give the pill a 44px touch area. */
+  /* The <select> itself must clear the 44px touch floor (the wrapping chip's
+     min-height doesn't give the control its own tap height). */
+  .repeatSelect {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .repeatChip {
+    min-height: 44px;
+  }
+}

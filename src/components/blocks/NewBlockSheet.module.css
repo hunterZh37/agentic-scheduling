@@ -1,0 +1,183 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.32);
+  animation: fade var(--dur-base) var(--ease-standard);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.sheet {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  border: 1px solid var(--hairline);
+  padding: var(--space-5);
+  animation: rise var(--dur-slow) var(--ease-emphasized);
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--type-title2);
+  font-weight: 600;
+  letter-spacing: var(--tr-title2);
+}
+
+.label {
+  display: block;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: var(--space-1);
+}
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-body);
+  font-family: inherit;
+  margin-bottom: var(--space-4);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.timeRow {
+  display: flex;
+  gap: var(--space-3);
+}
+.timeField {
+  flex: 1;
+  /* Without this a date input refuses to shrink below its intrinsic width and
+     pushes its neighbour off the sheet. */
+  min-width: 0;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: var(--type-body);
+  color: var(--text-1);
+  cursor: pointer;
+  user-select: none;
+}
+.checkRow input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.picker {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.error {
+  margin: 0 0 var(--space-3);
+  font-size: var(--type-footnote);
+  color: var(--state-cancelled);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+.cancel,
+.confirm {
+  flex: 1;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--type-body);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--hairline-strong);
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.cancel {
+  background: var(--surface);
+  color: var(--text-1);
+}
+.cancel:hover {
+  background: var(--surface-sunken);
+}
+.confirm {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.confirm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Phone: tighter overlay; let the sheet scroll if the keyboard shrinks the
+   visual viewport so the action buttons stay reachable. --- */
+@media (max-width: 768px) {
+  .overlay {
+    padding: var(--space-3);
+  }
+  /* Two native date inputs cannot share a 320px row: they have a fixed
+     intrinsic width and the second one hung 33px off the edge of the sheet.
+     Stack them instead of letting them overflow. */
+  .timeRow {
+    flex-wrap: wrap;
+  }
+  .timeField {
+    flex: 1 1 130px;
+  }
+  /* 44px tap floor for every control in the sheet. */
+  .input,
+  .select,
+  .primary,
+  .ghost,
+  .close {
+    min-height: 44px;
+  }
+  .sheet {
+    max-height: 90vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* --- Phone: the all-day checkbox and text inputs ---
+   The checkbox was 16px and the inputs 15px (below 16px iOS zooms on focus and
+   never zooms back). The recurrence preset rows live in RecurrencePicker. */
+@media (max-width: 768px) {
+  .checkRow {
+    min-height: 44px;
+  }
+  .checkRow input {
+    width: 22px;
+    height: 22px;
+  }
+  /* 16px is the threshold below which iOS zooms the page on focus and never
+     zooms back out. */
+  .input {
+    font-size: 16px;
+  }
+}

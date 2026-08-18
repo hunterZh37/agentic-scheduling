@@ -1,0 +1,8 @@
+# bookwithhunter.com — booking page for Hunter Zhang Consulting, the personal
+# consulting practice of Hunter Zhang (hunterzhangconsulting.com):
+# AI/ML, robotics, automation, product development, and intelligence safety.
+# The owner dashboard is login-gated; public pages are /book, /privacy, /terms.
+User-agent: *
+Allow: /
+
+Sitemap: https://bookwithhunter.com/sitemap.xml
