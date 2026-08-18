@@ -1,0 +1,591 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--surface);
+  color: var(--text-1);
+}
+
+/* --- Toolbar --- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.title {
+  margin: 0;
+  font-size: var(--type-title1);
+  line-height: var(--lh-title1);
+  font-weight: var(--w-title1);
+  letter-spacing: var(--tr-title1);
+}
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.navGroup {
+  display: flex;
+  gap: var(--space-1);
+}
+.iconBtn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.iconBtn:hover {
+  background: var(--surface-sunken);
+}
+.todayBtn {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.todayBtn:hover {
+  background: var(--surface-sunken);
+}
+
+/* --- Segmented control --- */
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+}
+.segment {
+  padding: 6px 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-callout);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.segmentActive {
+  background: var(--surface);
+  color: var(--text-1);
+  box-shadow: var(--e1);
+}
+
+/* --- Legend --- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+  color: var(--text-2);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+}
+.legendReserved {
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1px dashed rgba(120, 120, 128, 0.55);
+  background: repeating-linear-gradient(45deg, rgba(120, 120, 128, 0.14) 0 4px, transparent 4px 8px);
+}
+
+/* --- Fetch state banners --- */
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+  color: var(--text-3);
+  border-bottom: 1px solid var(--hairline);
+}
+.errorBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+  color: var(--state-cancelled);
+  border-bottom: 1px solid var(--hairline);
+}
+.retryBtn {
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: var(--type-caption);
+  font-weight: 500;
+  cursor: pointer;
+}
+.warnBar {
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--type-footnote);
+  line-height: var(--lh-footnote);
+  color: var(--state-warning);
+  border-bottom: 1px solid var(--hairline);
+}
+
+/* --- Grid --- */
+.gridScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  align-items: start;
+}
+.gridSingle {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+.gutterCorner {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--hairline);
+}
+.dayHead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-3) 0;
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+.dayName {
+  font-size: var(--type-caption);
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.dayNum {
+  font-size: var(--type-title3);
+  font-weight: 600;
+  color: var(--text-1);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.dayNumToday {
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-pill);
+}
+
+/* A clickable day header (week/day view) that selects the day for the agenda. */
+.dayHeadSelectable {
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.dayHeadSelectable:hover {
+  background: var(--surface-sunken);
+}
+/* "Selected" reads as an accent underline + accent weekday — distinct from the
+   accent-filled "today" pill on the day number. */
+.dayHeadSelected {
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+.dayHeadSelected .dayName {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.gutter {
+  position: relative;
+}
+.gutterLabel {
+  position: absolute;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.col {
+  position: relative;
+  border-left: 1px solid var(--hairline);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--hairline) 0,
+    var(--hairline) 1px,
+    transparent 1px,
+    transparent 54px
+  );
+}
+.today {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.weekend {
+  background-color: var(--surface-sunken);
+}
+/* Selected day column: a stronger accent wash than "today" (source order lets it
+   win the background over .today/.weekend for the currently selected column). */
+.colSelected {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* --- Current-time line --- */
+.nowLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--state-cancelled);
+  z-index: 2;
+  pointer-events: none;
+}
+.nowDot {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--state-cancelled);
+}
+
+/* --- Tiles --- */
+.tile {
+  position: absolute;
+  border-radius: 7px;
+  padding: 3px 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.2;
+  cursor: pointer;
+  z-index: 1;
+  transition: filter var(--dur-fast) var(--ease-standard);
+}
+.tile:hover {
+  filter: brightness(1.05);
+}
+.tileTitle {
+  font-size: var(--type-caption);
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tileTime {
+  font-size: 11px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventTile {
+  border-left: 3px solid var(--tile-accent);
+  background: color-mix(in srgb, var(--tile-accent) 12%, transparent);
+}
+:global([data-theme="dark"]) .eventTile {
+  background: color-mix(in srgb, var(--tile-accent) 24%, transparent);
+}
+
+.blockTile {
+  border: 1px dashed rgba(120, 120, 128, 0.55);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(120, 120, 128, 0.1) 0 6px,
+    transparent 6px 12px
+  );
+}
+.blockTile .tileTitle {
+  color: var(--text-2);
+}
+
+/* Actionables: accent-tinted, their own kind; open the detail modal like events. */
+.actionableTile {
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+:global([data-theme="dark"]) .actionableTile {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* --- Month view --- */
+.monthScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+.monthDow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  padding: var(--space-2) 0;
+  font-size: var(--type-caption);
+  color: var(--text-2);
+  border-bottom: 1px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  z-index: 1;
+}
+.monthGrid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(96px, 1fr);
+}
+.monthCell {
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 4px 5px;
+  min-width: 0;
+  overflow: hidden;
+  /* Lets the chips below respond to how wide THIS cell is (via @container),
+     independent of the viewport — the same month renders wide (labelled chips)
+     in a roomy pane and narrow (dots) in the dashboard's slim calendar. */
+  container-type: inline-size;
+}
+.monthCell:nth-child(7n) {
+  border-right: none;
+}
+.monthCellMuted {
+  background: var(--surface-sunken);
+}
+/* Whole month cells are clickable to select that day for the agenda. */
+.monthCellSelectable {
+  cursor: pointer;
+}
+.monthCellSelectable:hover {
+  background: var(--surface-sunken);
+}
+/* "Selected" reads as an accent ring around the cell — distinct from the "today"
+   accent pill on the day number and the muted "other-month" cells. */
+.monthCellSelected {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.monthCellMuted .monthDayNum {
+  color: var(--text-3);
+}
+.monthDayNum {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: var(--type-footnote);
+  color: var(--text-1);
+  margin-bottom: 2px;
+}
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 3px;
+  border: none;
+  border-radius: 4px;
+  /* No filled pill: a leading colour dot plus the title, so a busy day reads as
+     a quiet list rather than a stack of saturated blocks (the iOS month look —
+     content over chrome). Blocks and birthdays keep their own fill below, since
+     those carry meaning the dot can't. */
+  background: transparent;
+  font-size: var(--type-caption);
+  font-family: inherit;
+  overflow: hidden;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--surface-sunken);
+}
+.chipDot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+}
+.chipBlock {
+  background: repeating-linear-gradient(45deg, rgba(120, 120, 128, 0.1) 0 4px, transparent 4px 8px);
+  border: 1px dashed rgba(120, 120, 128, 0.4);
+}
+.chipBirthday {
+  background: color-mix(in srgb, #d946a8 14%, transparent);
+  border: 1px solid color-mix(in srgb, #d946a8 30%, transparent);
+}
+:global([data-theme="dark"]) .chipBirthday {
+  background: color-mix(in srgb, #d946a8 28%, transparent);
+}
+.chipTitle {
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.moreChip {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  padding: 0 4px;
+}
+
+/* Narrow cells (the dashboard's slim calendar, a phone's month tab) can't fit a
+   title, so a labelled chip collapses to a colour dot + a clipped letter. Below
+   this width, drop the titles entirely and show a tidy row of dots — the iOS
+   month look. One dot per item, still capped, still "+N". Wider cells keep their
+   labels. */
+@container (max-width: 104px) {
+  .chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+  }
+  .chip {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    gap: 0;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .chip:hover {
+    background: transparent;
+  }
+  .chipTitle {
+    display: none;
+  }
+  .chipDot {
+    width: 6px;
+    height: 6px;
+  }
+  /* Blocks and birthdays carry no inner dot (they're identified by fill), so at
+     this size the chip box itself becomes their dot. */
+  .chipBlock {
+    background: var(--state-busy);
+    border: none;
+  }
+  .chipBirthday {
+    background: #d946a8;
+    border: none;
+  }
+  .moreChip {
+    padding: 0;
+    line-height: 1;
+  }
+}
+
+/* --- Phone: compact, wrapping toolbar + larger touch targets --- */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .toolbarLeft {
+    gap: var(--space-2);
+  }
+  .title {
+    /* Title1 (28px) is too big for a phone header row; step down a notch. */
+    font-size: var(--type-title2);
+    line-height: var(--lh-title2);
+    letter-spacing: var(--tr-title2);
+  }
+  /* The view switch + theme toggle wrap onto their own full-width row so the
+     title/nav row above stays uncrowded. */
+  .toolbarRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+  /* Grow the tap targets to a comfortable size (>= 40px). */
+  .iconBtn {
+    /* 44x44 is the platform minimum touch target; the glyph buttons were 40. */
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+  .todayBtn {
+    padding: var(--space-2) var(--space-4);
+    min-height: 44px;
+  }
+  .segment {
+    /* Match the 44px touch-target floor used by the nav and Today controls. */
+    padding: 11px 16px;
+  }
+  /* Narrow the time gutter to give the day columns more room. */
+  .grid {
+    grid-template-columns: 44px repeat(7, minmax(0, 1fr));
+  }
+  .gridSingle {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .gutterLabel {
+    right: var(--space-1);
+    font-size: 10px;
+  }
+}
+
+/* Reduced transparency: solidify the frosted sticky headers. */
+@media (prefers-reduced-transparency: reduce) {
+  .dayHead,
+  .gutterCorner,
+  .monthDow {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}

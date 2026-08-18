@@ -1,0 +1,143 @@
+/* ============================================================
+   Personal Scheduling — Design Tokens
+   Drop into :root. Dark mode via [data-theme="dark"].
+   Values are the source of truth for the HTML prototype.
+   ============================================================ */
+
+:root {
+  /* Theme the browser's own chrome (native date/time pickers, <select>
+     dropdowns, scrollbars) so their glyphs match the app's surface instead of
+     rendering a dark UA default that vanishes on dark backgrounds. Overridden
+     in the dark block below. */
+  color-scheme: light;
+
+  /* --- Neutral surfaces (light) --- */
+  --bg-canvas:      #F5F5F7;
+  --surface:        #FFFFFF;
+  --surface-sunken: #F0F0F3;
+  --text-1:         #1D1D1F;  /* primary   */
+  --text-2:         #6E6E73;  /* secondary */
+  --text-3:         #A1A1A6;  /* tertiary  */
+  --hairline:       rgba(0,0,0,0.07);
+  --hairline-strong:rgba(0,0,0,0.12);
+  /* Translucent chrome material (Apple glass): a floating bar the content
+     scrolls under. Write `backdrop-filter` alone at the use site — Lightning
+     CSS adds the -webkit- prefix; a hand-written one makes it drop both. */
+  --material-chrome: rgba(255,255,255,0.7);
+
+  /* --- Account colors (light) --- a fixed 6-hue palette. Which account gets
+     which slot is assigned deterministically by hashing its email (see
+     src/lib/design/accounts.ts) — NOT tied to any specific account here, so
+     any number of arbitrary connected accounts each get a stable color.
+     Personal blocks reuse the same palette (src/lib/design/blockColors.ts). --- */
+  --acct-1: #0071E3;
+  --acct-2: #5E5CE6;
+  --acct-3: #FF2D92;
+  --acct-4: #FF9500;
+  --acct-5: #AF52DE;
+  --acct-6: #30B0C7;
+
+  /* --- Semantic state --- */
+  --state-free:       #34C759;
+  --state-busy:       #8E8E93;
+  --state-confirmed:  #0071E3;
+  --state-cancelled:  #FF3B30;
+  --state-birthday:   #D946A8;
+  --state-warning:    #FF9500;
+  /* Bookings get their own identity so they read apart from actionables
+     (accent blue) and events (per-account hue). Green isn't in the account
+     palette, so it never collides with an event in the same list. */
+  --state-booking:    #248A3D;
+
+  /* --- Accent (primary action) --- */
+  --accent:           #0071E3;
+  --accent-tint:      rgba(0,113,227,0.12);
+
+  /* --- Typography --- SF via system stack; no webfont --- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+               "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* size / line-height / weight / tracking */
+  --type-display:  34px; --lh-display: 40px; --w-display: 700; --tr-display: -0.025em;
+  --type-title1:   28px; --lh-title1:  34px; --w-title1:  600; --tr-title1:  -0.02em;
+  --type-title2:   22px; --lh-title2:  28px; --w-title2:  600; --tr-title2:  -0.015em;
+  --type-title3:   17px; --lh-title3:  22px; --w-title3:  600;
+  --type-body:     15px; --lh-body:    22px; --w-body:    400;
+  --type-callout:  14px; --lh-callout: 20px;
+  --type-footnote: 13px; --lh-footnote:18px;
+  --type-caption:  12px; --lh-caption: 16px;
+  /* numeric/time: use --font-sans + font-variant-numeric: tabular-nums */
+
+  /* --- Spacing (4pt base) --- */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+  /* --- Radius --- */
+  --radius-sm: 6px;  --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px; --radius-pill: 999px;
+
+  /* --- Elevation --- */
+  --e1: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.05);   /* rest    */
+  --e2: 0 4px 12px rgba(0,0,0,.10);                              /* raised  */
+  --e3: 0 12px 40px rgba(0,0,0,.16);                             /* panel   */
+
+  /* --- Motion --- */
+  --dur-fast: 120ms;  /* taps, hovers        */
+  --dur-base: 200ms;  /* slot select, panels */
+  --dur-slow: 320ms;  /* confirm, sheets     */
+  --ease-standard:   cubic-bezier(.2,0,0,1);
+  --ease-emphasized: cubic-bezier(.32,.72,0,1);
+  /* Gentle overshoot — the momentum "settle" a spring gives, for motion that
+     follows a gesture (pane switch, sheet). The y > 1 control point is the
+     small bounce past the target before it lands. */
+  --ease-spring:     cubic-bezier(.22,1.15,.36,1);
+}
+
+[data-theme="dark"] {
+  /* Dark native controls (see :root note): makes the time/date picker glyph
+     and <select> arrow render light so they're visible on dark surfaces. */
+  color-scheme: dark;
+
+  /* --- Neutral surfaces (dark) --- */
+  --bg-canvas:      #000000;
+  --surface:        #1C1C1E;
+  --surface-sunken: #2C2C2E;   /* "elevated" in dark */
+  --text-1:         #F5F5F7;
+  --text-2:         #98989D;
+  /* Was #6E6E73 (~3.2:1 on --surface, below WCAG AA). Lifted to clear ~4.5:1
+     while staying a step below --text-2, so muted labels/hints stay readable. */
+  --text-3:         #8A8A8F;
+  --hairline:       rgba(255,255,255,0.08);
+  --hairline-strong:rgba(255,255,255,0.14);
+  --material-chrome: rgba(28,28,30,0.62);
+
+  /* --- Account colors (dark) --- */
+  --acct-1: #0A84FF;
+  --acct-2: #5E5CE6;
+  --acct-3: #FF375F;
+  --acct-4: #FF9F0A;
+  --acct-5: #BF5AF2;
+  --acct-6: #40C8E0;
+
+  --state-free:       #30D158;
+  --state-busy:       #8E8E93;
+  --state-confirmed:  #0A84FF;
+  --state-cancelled:  #FF453A;
+  --state-birthday:   #D946A8;
+  --state-warning:    #FF9F0A;
+  --state-booking:    #32D74B;
+
+  --accent:           #0A84FF;
+  --accent-tint:      rgba(10,132,255,0.22);
+
+  --e2: 0 4px 12px rgba(0,0,0,.4);
+  --e3: 0 18px 50px rgba(0,0,0,.55);
+}
+
+/* Event-tile recipes (reference)
+   Real event:     background: color-mix(in srgb, var(--acct-N) 12%, transparent);
+                   border-left: 3px solid var(--acct-N); color: <darker acct in light / lighter in dark>
+   Personal block: background: repeating-linear-gradient(45deg, rgba(120,120,128,.10) 0 6px, transparent 6px 12px);
+                   border: 1px dashed rgba(120,120,128,.55); color: var(--text-2);   (grey striped = "reserved")
+   Proposed/ghost: border: 1.5px dashed var(--accent); background: var(--accent-tint);  (agent preview, uncommitted)
+*/

@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentic-scheduling-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: scheduling
+      POSTGRES_PASSWORD: scheduling
+      POSTGRES_DB: scheduling
+    ports:
+      # Host 5433 to avoid colliding with a native Postgres on 5432.
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduling -d scheduling"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

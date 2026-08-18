@@ -1,0 +1,132 @@
+/* Token usage panel. Shell (overlay/sheet/close/title/blurb) is reused from
+   SettingsManager.module.css; these are the usage-specific bits. */
+.stats {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  margin: var(--space-4) 0 var(--space-5);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.statValue {
+  font-size: var(--type-title2);
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+.statLabel {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--hairline);
+}
+.rowHead {
+  border-top: none;
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.proc {
+  color: var(--text-1);
+  font-weight: 500;
+}
+.procSub {
+  display: block;
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  font-weight: 400;
+}
+.tokens,
+.cost {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  text-align: right;
+}
+.cost {
+  color: var(--text-1);
+  min-width: 64px;
+}
+.empty {
+  font-size: var(--type-footnote);
+  color: var(--text-3);
+  padding: var(--space-3) 0;
+}
+.footnote {
+  margin-top: var(--space-4);
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+/* Recent turns: what Alex said each turn, tap to expand the full reply + prompt. */
+.recent {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.recentHead {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: var(--space-1);
+}
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+}
+.turn:hover {
+  background: var(--surface-sunken);
+}
+.turnMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--type-caption);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.turnTokens {
+  flex-shrink: 0;
+}
+.turnPrompt {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+.turnReply {
+  font-size: var(--type-footnote);
+  color: var(--text-1);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.turnReplyFull {
+  font-size: var(--type-footnote);
+  color: var(--text-1);
+  white-space: pre-wrap;
+}

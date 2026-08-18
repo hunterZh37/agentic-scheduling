@@ -1,0 +1,383 @@
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+  color: var(--text-1);
+}
+
+/* Glass header: the thread scrolls up under it and frosts through. */
+.header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--hairline);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .header,
+  .composer {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: var(--type-footnote);
+  font-weight: 600;
+}
+.name {
+  font-size: var(--type-title3);
+  font-weight: 600;
+}
+.online {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--state-free);
+}
+/* Alex-unavailable status pill in the header (credits low / key invalid / …). */
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex-shrink: 0;
+}
+.statusDown {
+  color: var(--state-danger, #ff453a);
+  background: color-mix(in srgb, var(--state-danger, #ff453a) 14%, transparent);
+}
+.statusWarn {
+  color: var(--state-warning, #ff9f0a);
+  background: color-mix(in srgb, var(--state-warning, #ff9f0a) 16%, transparent);
+}
+.tz {
+  margin-left: auto;
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+
+.thread {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  /* Extra top/bottom room so messages clear — and scroll under — the floating
+     glass header and composer. */
+  padding: calc(var(--space-6) + 40px) var(--space-5) calc(var(--space-6) + 44px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bubbleRow {
+  display: flex;
+}
+.rowAgent {
+  justify-content: flex-start;
+}
+.rowUser {
+  justify-content: flex-end;
+}
+.bubble {
+  max-width: 82%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--type-callout);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+.agent {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  border-radius: 16px 16px 16px 4px;
+}
+.user {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+}
+
+/* Tappable openers shown while the thread holds only the welcome bubble. */
+.starters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.starterChip {
+  max-width: 82%;
+  text-align: left;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-footnote, var(--type-callout));
+  color: var(--text-1);
+  background: transparent;
+  border: 1px solid var(--hairline, var(--border, rgba(128, 128, 128, 0.28)));
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.starterChip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.starterChip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Typing indicator shown while the agent is composing a reply. */
+.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.typingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--text-3);
+  animation: typingBounce 1.2s var(--ease-standard) infinite;
+}
+.typingDot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typingDot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typingDot {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Floating glass bar: the conversation scrolls behind it and blurs through, an
+   Apple material rather than an opaque strip. Standard property only — the
+   build's Lightning CSS adds the -webkit- prefix; a hand-written one makes it
+   drop the declaration entirely. */
+.composer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--hairline);
+}
+/* Full-pane overlay shown while a screenshot is dragged over the chat, so it's
+   clear the whole pane is a drop target. */
+.dropHint {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 2px dashed var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.dropHintInner {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: var(--type-callout);
+  font-weight: 600;
+}
+/* The input row inside the composer (attach button + text field + send). */
+.composerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Thumbnails of screenshots staged for the next message, above the input row. */
+.attachRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.thumb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+}
+.thumbRemove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--text-1);
+  color: var(--surface);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+/* The attach-screenshot button, left of the text field. */
+.attach {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.attach:hover {
+  color: var(--text-1);
+}
+.attach:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Screenshots shown inside a chat bubble. */
+.bubbleImages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.bubbleImage {
+  max-width: 180px;
+  max-height: 200px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .composer {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+.input {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  font-family: inherit;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.send {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
+}
+.send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Markdown rendering inside agent bubbles (bold / strike / lists / code). */
+.agent p {
+  margin: 0 0 var(--space-2);
+}
+.agent p:last-child {
+  margin-bottom: 0;
+}
+.agent ul {
+  margin: var(--space-1) 0 var(--space-2);
+  padding-left: 1.15em;
+}
+.agent ul:last-child {
+  margin-bottom: 0;
+}
+.agent li {
+  margin: 2px 0;
+}
+.agent strong {
+  font-weight: 600;
+}
+.agent del {
+  opacity: 0.55;
+}
+.agent code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: var(--hairline);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .send {
+    width: 44px;
+    height: 44px;
+  }
+}

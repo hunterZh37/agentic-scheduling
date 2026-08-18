@@ -1,0 +1,668 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.6);
+  animation: fade var(--dur-base) var(--ease-standard);
+}
+@keyframes fade {
+  from { opacity: 0; }
+}
+.card {
+  position: relative;
+  width: 100%;
+  /* Wide enough that a typical booking title ("First Last <> Hunter", ~230px
+     at title size) shares the header row with "Cancel booking" + × (~160px)
+     instead of wrapping them onto a mostly-empty second line. */
+  max-width: 540px;
+  max-height: 82vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--e3);
+  border: 1px solid var(--hairline);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  animation: rise var(--dur-slow) var(--ease-emphasized);
+}
+/* Materialize, don't just fade: the card resolves out of a blur while it scales
+   up, so it reads as a real surface coming into focus rather than a rectangle
+   fading in. Blur + scale are animated together (Apple's guidance for glass
+   surfaces arriving). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.close:hover {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  /* No wrap: the Edit/✕ controls stay pinned top-right (flex-shrink: 0) and the
+     title wraps in the space BESIDE them, instead of a long title taking the
+     whole row and shoving the controls onto their own line. No padding-right
+     reservation either — the controls take their own space in flow. */
+  flex-wrap: nowrap;
+  margin-bottom: var(--space-5);
+}
+.title {
+  /* Basis auto so the wrap decision follows the title's REAL width: a short
+     title shares the row with the controls; only a title too long to fit
+     pushes them onto their own line. The previous fixed 58% basis meant a
+     booking's wider controls ("Cancel booking" + ×) could NEVER fit beside
+     the title, so every booking showed a dead controls-only row under a
+     one-word title. */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* On a narrow card a long title plus three controls cannot share a line, so the
+   row wraps and the actions sit beneath rather than squeezing the title. */
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Always-visible Edit affordance, pinned top-right next to Close so it never
+   ends up buried below a long event description. */
+.editTop {
+  flex-shrink: 0;
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-sunken);
+  color: var(--text-1);
+  border-radius: var(--radius-md);
+  padding: 5px 14px;
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-standard);
+}
+.editTop:hover {
+  filter: brightness(1.05);
+}
+.swatch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+.title {
+  margin: 0;
+  font-size: var(--type-title2);
+  line-height: var(--lh-title2);
+  font-weight: 600;
+  letter-spacing: var(--tr-title2);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+.rowMain {
+  font-size: var(--type-body);
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.rowSub {
+  font-size: var(--type-footnote);
+  color: var(--text-2);
+  margin-top: 2px;
+}
+/* Location opens Google Maps (or the URL if the provider put one there). */
+.locationLink {
+  font-size: var(--type-body);
+  color: var(--accent);
+  text-decoration: none;
+  /* A raw location URL (e.g. an app deep link) can be longer than a phone is
+     wide; let it wrap instead of pushing the panel into horizontal scroll. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.locationLink:hover {
+  text-decoration: underline;
+}
+.acctDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+}
+
+.joinBtn {
+  display: inline-block;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--type-callout);
+  font-weight: 600;
+}
+.joinBtn:hover {
+  filter: brightness(1.06);
+}
+
+.guestCount {
+  font-size: var(--type-body);
+  color: var(--text-1);
+}
+.guestSub {
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+}
+.guests {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.guest {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.guestAvatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+  font-size: var(--type-caption);
+  font-weight: 600;
+}
+.guestBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.guestName {
+  font-size: var(--type-callout);
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.organizer {
+  font-size: var(--type-caption);
+  color: var(--text-3);
+}
+.rsvp {
+  flex-shrink: 0;
+  font-size: var(--type-caption);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+.yes {
+  color: var(--state-free);
+  background: color-mix(in srgb, var(--state-free) 14%, transparent);
+}
+.no {
+  color: var(--state-cancelled);
+  background: color-mix(in srgb, var(--state-cancelled) 14%, transparent);
+}
+.maybe {
+  color: var(--state-warning);
+  background: color-mix(in srgb, var(--state-warning) 14%, transparent);
+}
+.awaiting {
+  color: var(--text-3);
+  background: var(--surface-sunken);
+}
+
+.desc {
+  font-size: var(--type-callout);
+  line-height: var(--lh-body);
+  color: var(--text-2);
+  /* normal (not pre-wrap): stray source newlines from pasted HTML emails
+     collapse; line breaks come from the description's own <br>/<p> tags.
+     Plain-text descriptions get their newlines turned into <br> in the
+     sanitizer, so their structure is preserved too. */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+/* Tame the block spacing of a pasted HTML-email description. */
+.desc p,
+.desc div {
+  margin: 0;
+}
+.desc p + p {
+  margin-top: var(--space-2);
+}
+.desc ul,
+.desc ol {
+  margin: var(--space-1) 0;
+  padding-left: 1.2em;
+}
+.desc a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.openExternal {
+  font-size: var(--type-footnote);
+  color: var(--accent);
+}
+
+/* --- Follow-ups section (view mode, events only) --- */
+.followups {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.followHead {
+  font-size: var(--type-caption);
+  font-weight: 600;
+  color: var(--text-2);
+}
+.followItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.followCheck {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--hairline-strong);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.followCheck[data-done="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.followTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-callout);
+  color: var(--text-1);
+}
+.followTitle[data-done="true"] {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+.followTitle a {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-word;
+}
+.followDelete {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--type-body);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+.followDelete:hover {
+  color: var(--state-cancelled);
+}
+.followInput {
+  margin-top: var(--space-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  padding: var(--space-2) var(--space-3);
+}
+.followInput::placeholder {
+  color: var(--text-3);
+}
+
+/* --- View footer: external link + Edit affordance --- */
+.viewFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+/* --- Edit form --- */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.fLabel {
+  font-size: var(--type-caption);
+  font-weight: 600;
+  color: var(--text-2);
+  margin-top: var(--space-2);
+}
+.fInput {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: var(--type-callout);
+  font-family: inherit;
+}
+.fInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.fTextarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: var(--lh-body);
+}
+.fGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: var(--space-2);
+}
+.fCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.fError {
+  margin: var(--space-1) 0 0;
+  font-size: var(--type-footnote);
+  color: var(--state-cancelled);
+}
+/* Small muted helper line under a field (used by the recurring editor). */
+.hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--type-footnote);
+  color: var(--text-3);
+}
+/* The "Next trigger" block in the recurring editor: a labeled line with the
+   computed next occurrence and a jump-to-that-day action. */
+.nextTrigger {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--hairline);
+}
+.nextTriggerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+  font-size: var(--type-callout);
+  color: var(--text-1);
+}
+.footerEdit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.footerSpacer {
+  flex: 1;
+}
+
+/* --- Shared buttons (edit form + confirm) --- */
+.btnPrimary {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btnGhost {
+  border: 1px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--text-1);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btnGhost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btnDanger {
+  border: 1px solid color-mix(in srgb, var(--state-cancelled) 45%, transparent);
+  background: transparent;
+  color: var(--state-cancelled);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--type-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btnDanger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Guest-notification confirm (covers the card) --- */
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border-radius: var(--radius-xl);
+}
+.confirmCard {
+  width: 100%;
+  max-width: 408px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e3);
+  padding: var(--space-4);
+}
+.confirmText {
+  margin: 0 0 var(--space-4);
+  font-size: var(--type-body);
+  line-height: var(--lh-body);
+  color: var(--text-1);
+}
+.confirmBtns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* --- Phone: give the card more of the screen and stack the date/time grid --- */
+@media (max-width: 768px) {
+  .overlay {
+    /* Bottom sheet: pin the card to the bottom edge, full-bleed, so it reads as
+       a modal on a dark theme where a scrim alone barely registers. */
+    padding: 0;
+    align-items: end;
+  }
+  .card {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    /* A big surface should read as thick: a deep upward shadow lifts the sheet
+       off the list beneath it, so it's clearly a layer on top rather than a
+       card wedged into the page. */
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.34);
+    /* Roomier on a phone; clear the home-indicator / gesture area. */
+    padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+    animation: sheetUp var(--dur-slow) var(--ease-emphasized);
+  }
+  /* Grab handle so it reads as a sheet, not a card wedged over the list. */
+  .card::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--hairline-strong);
+    margin: 0 auto var(--space-4);
+  }
+  /* Header is a clean flex row (title left, Edit + ✕ right). The old
+     absolute-positioning overrides — a reserved `padding-right` on .head and a
+     `right:` on .editTop — are gone; they were leftovers that shoved the
+     controls into the middle of the sheet. */
+  .head {
+    align-items: flex-start;
+    margin-bottom: var(--space-4);
+  }
+  /* Phone tap targets: the interactive CHROME of the modal must clear the 44px
+     touch floor. (Links inside the provider description are prose, not chrome —
+     they are exempt, like inline links in legal copy.) */
+  .close {
+    width: 44px;
+    height: 44px;
+  }
+  .editTop,
+  .cancelTop {
+    min-height: 44px;
+  }
+  .followInput {
+    min-height: 44px;
+  }
+  /* Standalone action links: give them a real touch height without changing the
+     text flow, since each sits on its own row. */
+  .locationLink,
+  .openExternal {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* The "Join with <provider>" button clears the tap floor on phones too. */
+  .joinBtn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* Edit-form controls: clear the 44px touch floor on phones, and keep the
+     Repeat <select> at 16px so iOS doesn't zoom on focus (globals' element-level
+     anti-zoom rule is out-specified by the `.fInput` class). Text inputs are
+     already 16px via globals; native date/time pickers keep their own size. */
+  .fInput {
+    min-height: 44px;
+  }
+  select.fInput {
+    font-size: 16px;
+  }
+  .btnPrimary,
+  .btnGhost,
+  .btnDanger {
+    min-height: 44px;
+  }
+  /* Date on its own full-width row; start/end times side by side beneath it. */
+  .fGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .fCol:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .overlay {
+    animation: none;
+  }
+}
+
+/* "Cancel booking" in the panel header. Sits where Edit sits for an event —
+   a booking cannot be edited here (the attendee owns its time and has a manage
+   link), but the owner must be able to call it off. Danger-toned so it is not
+   confused with the ✕ that just closes the panel. */
+.cancelTop {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--state-danger, #ff453a);
+  font-size: var(--type-footnote);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cancelTop:hover {
+  background: color-mix(in srgb, var(--state-danger, #ff453a) 12%, transparent);
+}
+.cancelTop:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

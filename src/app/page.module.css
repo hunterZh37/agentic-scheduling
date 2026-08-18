@@ -1,0 +1,29 @@
+.main {
+  /* Dynamic viewport height at EVERY width, not just phones: a tablet or laptop
+     browser with a retractable bottom toolbar treats 100vh as the toolbar-hidden
+     height, so a bottom-anchored element (the agent composer) is drawn behind the
+     toolbar and its bottom is clipped. 100dvh tracks the visible viewport. The
+     100vh line is the fallback for browsers without dvh (equal to dvh there). */
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--space-5);
+  background: var(--bg-canvas);
+}
+
+/* Tablet: trim the canvas padding but keep the desktop three-pane. */
+@media (max-width: 980px) {
+  .main {
+    padding: var(--space-3);
+  }
+}
+
+/* Phone / small tablet: the workspace goes full-bleed and switches to a
+   single-pane + tab-bar layout (see ThreePane.module.css). Use dynamic
+   viewport height (100dvh) so the browser's URL bar and on-screen keyboard
+   don't clip the bottom tab bar or the agent composer. */
+@media (max-width: 768px) {
+  .main {
+    height: 100dvh;
+    padding: 0;
+  }
+}

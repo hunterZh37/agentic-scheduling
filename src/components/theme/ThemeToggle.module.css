@@ -1,0 +1,17 @@
+.toggle {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.toggle:hover {
+  background: var(--surface-sunken);
+  color: var(--text-1);
+}
