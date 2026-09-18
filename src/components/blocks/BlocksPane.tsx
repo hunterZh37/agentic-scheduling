@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { DateTime } from "luxon";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
-import { locationHref } from "@/lib/maps";
+import { locationHref, locationLabel } from "@/lib/maps";
 import { accountVar } from "@/lib/design/accounts";
 import { friendlyRecurrence, presetToRule, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
@@ -180,7 +180,7 @@ function TodoWhere({ location, videoLink, phone }: { location?: string; videoLin
         className={styles.todoWhereLink}
         onClick={(e) => e.stopPropagation()}
       >
-        {location}
+        {locationLabel(location)}
       </a>
     );
   }

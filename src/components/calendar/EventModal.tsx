@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { DateTime } from "luxon";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
-import { locationHref } from "@/lib/maps";
+import { isMeetingLocation, locationHref, locationLabel } from "@/lib/maps";
 import { accountVar, colorForEmail } from "@/lib/design/accounts";
 import { useAccountLabels } from "@/components/calendars/useAccountLabels";
 import { isOvernight } from "@/lib/timeFormat";
@@ -580,14 +580,15 @@ export function EventModal({
 
           {item.location && (
             <div className={styles.row}>
-              <RowIcon name="location" />
+              {/* A location is a place OR a meeting link; the icon says which. */}
+              <RowIcon name={isMeetingLocation(item.location) ? "video" : "location"} />
               <a
                 className={styles.locationLink}
                 href={locationHref(item.location)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {item.location}
+                {locationLabel(item.location)}
               </a>
             </div>
           )}
