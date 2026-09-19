@@ -57,6 +57,9 @@ export const HOST = {
   },
   /// The owner's research site, linked from the booking rail.
   researchUrl: "https://www.protocolz.org/",
+  /// The owner's open-source mail and messages agent, advertised from the
+  /// booking rail under the research link.
+  messagingAgentUrl: "https://github.com/hunterZh37/messaging-agent",
   /// Public source code of this app, linked from the booking rail. This app is
   /// open source; the link doubles as a trust signal for visitors.
   sourceUrl: "https://github.com/hunterZh37/agentic-scheduling",

@@ -377,11 +377,18 @@ export function BookingPage({
                   ))}
             </ul>
             {!team && (
-              <p className={styles.research}>
-                <a href={HOST.researchUrl} target="_blank" rel="noopener noreferrer">
-                  Check out my research
-                </a>
-              </p>
+              <div className={styles.railLinks}>
+                <p className={styles.research}>
+                  <a href={HOST.researchUrl} target="_blank" rel="noopener noreferrer">
+                    Check out my research
+                  </a>
+                </p>
+                <p className={styles.research}>
+                  <a href={HOST.messagingAgentUrl} target="_blank" rel="noopener noreferrer">
+                    Try my open-source messaging agent
+                  </a>
+                </p>
+              </div>
             )}
             {/* Authorship credit. Deliberately quiet (small, muted label, set
                 off by a hairline) but not easy to skip: the accent dot catches

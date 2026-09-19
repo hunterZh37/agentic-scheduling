@@ -148,8 +148,16 @@
 }
 /* Research-site link under the areas list — same quiet accent treatment as
    the practice link above. */
-.research {
+/* The rail's outbound links, stacked. The group owns the bottom margin so a
+   second link adds one row, not a second full gap. */
+.railLinks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   margin: 0 0 var(--space-4);
+}
+.research {
+  margin: 0;
   font-size: var(--type-footnote);
 }
 .research a {
