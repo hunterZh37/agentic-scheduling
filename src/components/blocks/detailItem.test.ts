@@ -85,12 +85,22 @@ describe("untimedTodoDetailItem", () => {
     expect(d.title).toBe("Review Keith's document");
   });
 
-  it("seeds a 30-minute default slot at 9:00 AM local on the given day", () => {
+  // The seeded 9:00-9:30 slot used to reach the read view, which showed it as
+  // if it were stored: "It did have the time from 9 to 9:30" (owner,
+  // 2026-09-22) about an actionable that had no time at all. See
+  // docs/REGRESSIONS.md. The item is now marked untimed and anchored to the
+  // day only; the modal shows no time and the editor starts with empty times.
+  it("is marked untimed and invents no time of day", () => {
     const d = untimedTodoDetailItem({ id: "t1", title: "x" }, day);
+    expect(d.untimed).toBe(true);
     const start = DateTime.fromJSDate(d.start).setZone("America/Los_Angeles");
-    const end = DateTime.fromJSDate(d.end).setZone("America/Los_Angeles");
-    expect(start.toFormat("yyyy-MM-dd HH:mm")).toBe("2026-08-19 09:00");
-    expect(end.diff(start, "minutes").minutes).toBe(30);
+    expect(start.toFormat("yyyy-MM-dd HH:mm")).toBe("2026-08-19 00:00");
+    expect(d.end.getTime()).toBe(d.start.getTime());
+  });
+
+  it("a timed agenda row is never marked untimed", () => {
+    const item: AgendaItem = { ...base, key: "todo:t1", kind: "todo", todoId: "t1", done: false };
+    expect(agendaDetailItem(item)?.untimed).toBeUndefined();
   });
 
   it("carries the where fields through", () => {

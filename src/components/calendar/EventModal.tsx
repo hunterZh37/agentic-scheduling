@@ -7,7 +7,7 @@ import { OWNER_TIMEZONE } from "@/lib/clientConfig";
 import { isMeetingLocation, locationHref, locationLabel } from "@/lib/maps";
 import { accountVar, colorForEmail } from "@/lib/design/accounts";
 import { useAccountLabels } from "@/components/calendars/useAccountLabels";
-import { isOvernight } from "@/lib/timeFormat";
+import { whenRow, editedTimes } from "./whenRow";
 import { sanitizeDescriptionHtml } from "@/lib/text/sanitizeDescriptionHtml";
 import { followupKey } from "@/lib/followups/key";
 import { useSheetDrag } from "@/lib/motion/useSheetDrag";
@@ -128,8 +128,10 @@ export function EventModal({
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [fTitle, setFTitle] = useState(item.title);
   const [fDate, setFDate] = useState(start.toISODate() ?? "");
-  const [fStart, setFStart] = useState(start.toFormat("HH:mm"));
-  const [fEnd, setFEnd] = useState(end.toFormat("HH:mm"));
+  // An untimed actionable starts the editor with EMPTY times. Prefilling a
+  // default here is how a title-only edit once quietly gave it a 9:00 slot.
+  const [fStart, setFStart] = useState(item.untimed ? "" : start.toFormat("HH:mm"));
+  const [fEnd, setFEnd] = useState(item.untimed ? "" : end.toFormat("HH:mm"));
   const [fLoc, setFLoc] = useState(item.location ?? "");
   // Actionable-only "where" fields. A Todo stores these as separate columns
   // (location / videoLink / phone) rather than one free-text field.
@@ -177,15 +179,23 @@ export function EventModal({
     // `date` must move with the times or the item keeps showing under its old
     // day (the agenda queries by that day key).
     if (isActionable) {
+      // Both times empty keeps (or makes) it untimed; one filled is refused
+      // rather than silently dropped or silently defaulted.
+      const t = editedTimes({ date: fDate, start: fStart, end: fEnd }, OWNER_TIMEZONE);
+      if (t.kind === "error") {
+        setError(t.message);
+        setBusy(false);
+        return;
+      }
       try {
         const res = await fetch(`/api/todos/${encodeURIComponent(providerId)}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: fTitle.trim(),
-            date: s.startOf("day").toUTC().toISO(),
-            startTime: s.toUTC().toISO(),
-            endTime: e.toUTC().toISO(),
+            date: t.date,
+            startTime: t.kind === "untimed" ? null : t.start,
+            endTime: t.kind === "untimed" ? null : t.end,
             location: fLoc,
             videoLink: fUrl,
             phone: fPhone,
@@ -335,16 +345,9 @@ export function EventModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, busy, confirm, mode]);
 
-  // Multi-day/overnight: the end time alone would read as same-day, so tack
-  // on each side's weekday, e.g. "11:00 PM Mon – 1:00 AM Tue".
-  const overnight = isOvernight(item.start, item.end, OWNER_TIMEZONE);
-  const sameMer = !overnight && start.toFormat("a") === end.toFormat("a");
-  const timeStr = overnight
-    ? `${start.toFormat("h:mm a")} ${start.toFormat("ccc")} – ${end.toFormat("h:mm a")} ${end.toFormat("ccc")}`
-    : sameMer
-      ? `${start.toFormat("h:mm")} – ${end.toFormat("h:mm a")}`
-      : `${start.toFormat("h:mm a")} – ${end.toFormat("h:mm a")}`;
-  const dateStr = start.toFormat("cccc, LLLL d");
+  // The "when" row. Untimed actionables show their day and "No time set";
+  // the rule lives in whenRow.ts so it is tested (see docs/REGRESSIONS.md).
+  const when = whenRow(item, OWNER_TIMEZONE);
 
   const colorVar =
     item.kind === "booking"
@@ -529,10 +532,8 @@ export function EventModal({
           <div className={styles.row}>
             <RowIcon name="when" />
             <div>
-              <div className={styles.rowMain}>{dateStr}</div>
-              <div className={`${styles.rowSub} tnum`}>
-                {timeStr} · {OWNER_TIMEZONE}
-              </div>
+              <div className={styles.rowMain}>{when.date}</div>
+              <div className={`${styles.rowSub} tnum`}>{when.time}</div>
             </div>
           </div>
 
@@ -593,7 +594,7 @@ export function EventModal({
             </div>
           )}
 
-          {(item.kind === "event" || item.kind === "booking" || item.kind === "actionable") && (
+          {(item.kind === "event" || item.kind === "booking" || item.kind === "actionable") && !item.untimed && (
             <div className={styles.row}>
               <ReminderControl
                 title={item.title}

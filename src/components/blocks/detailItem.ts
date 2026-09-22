@@ -3,23 +3,25 @@ import type { CalendarItem, ItemAttendee } from "@/components/calendar/types";
 import { HOST } from "@/lib/booking/publicConfig";
 
 /// Build the detail item for an UNTIMED actionable so its agenda row opens the
-/// same editor as every other item. An untimed to-do has no start/end, but the
-/// editor always shows a time, so we seed a default 30-minute slot at 9:00 AM
-/// on the given day (its own selected day); the owner adjusts or keeps it.
-/// Without this, untimed actionables were the one agenda row that could not be
-/// clicked to edit (reported 2026-08-19).
+/// same editor as every other item (without this, untimed actionables were the
+/// one agenda row that could not be clicked; reported 2026-08-19).
+///
+/// It is marked `untimed`, and start/end merely anchor it to its day at local
+/// midnight. No time of day is invented: an earlier version seeded 9:00-9:30
+/// here so the editor had a prefill, and the read view showed that as if it
+/// were stored (reported 2026-09-22). The editor now starts with empty times.
 export function untimedTodoDetailItem(
   t: { id: string; title: string; location?: string | null; videoLink?: string | null; phone?: string | null },
   day: DateTime
 ): CalendarItem {
-  const start = day.set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
-  const end = start.plus({ minutes: 30 });
+  const anchor = day.startOf("day").toUTC().toJSDate();
   return {
     id: `actionable:${t.id}`,
     kind: "actionable",
     title: t.title,
-    start: start.toUTC().toJSDate(),
-    end: end.toUTC().toJSDate(),
+    start: anchor,
+    end: anchor,
+    untimed: true,
     location: t.location ?? undefined,
     videoLink: t.videoLink ?? undefined,
     phone: t.phone ?? undefined,

@@ -16,6 +16,11 @@ export interface CalendarItem {
   title: string;
   start: Date;
   end: Date;
+  /// Actionables only: the to-do has no time of day. `start`/`end` then only
+  /// anchor the item to its day (local midnight) and must never be shown as a
+  /// time. The detail panel once seeded a 9:00-9:30 slot here and showed it as
+  /// if stored; the owner read it as real. See docs/REGRESSIONS.md.
+  untimed?: boolean;
   /// Present for real calendar events — drives the account color.
   accountEmail?: string;
   // Detail (present mainly on real events; used by the event detail modal).
