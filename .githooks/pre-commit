@@ -1,0 +1,37 @@
+#!/bin/sh
+# Refuse a Claude Code commit that changes the system's shape without the diagram.
+# Installed via `git config core.hooksPath .githooks` (npm run hooks:install).
+# Spec: docs/superpowers/specs/2026-09-21-live-system-diagram-design.md
+#
+# Only inside Claude Code (CLAUDECODE=1): the session making the change already
+# holds the context, so it updates docs/diagrams/system-architecture.json itself.
+# A commit made anywhere else goes through; post-commit logs the drift instead.
+# Looked and nothing to draw:  DIAGRAM_UNCHANGED=1 git commit ...
+
+[ "$CLAUDECODE" = "1" ] || exit 0
+[ -n "$ARCHIFY_HOOK" ] && exit 0
+[ "$DIAGRAM_UNCHANGED" = "1" ] && exit 0
+root=$(git rev-parse --show-toplevel) || exit 0
+# A merge commit carries the other branch's already-reviewed changes; the
+# index-vs-HEAD diff would re-flag all of them. Let it through.
+[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ] && exit 0
+drift="$root/tools/diagram-drift.mjs"
+[ -f "$drift" ] || exit 0
+
+reasons=$(node "$drift" --staged)
+[ $? -eq 1 ] || exit 0
+
+cat >&2 <<MSG
+
+Commit refused: this change can redraw the system diagram, but
+docs/diagrams/system-architecture.json is not staged.
+
+$(printf '%s\n' "$reasons" | sed 's/^/  - /')
+
+Update the JSON for these changes, render it, stage both, and commit again:
+  npm run diagram:render
+If you looked and the diagram is unaffected:
+  DIAGRAM_UNCHANGED=1 git commit ...
+
+MSG
+exit 1

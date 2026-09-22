@@ -39,3 +39,30 @@ that never gets added.
 tells you nothing about the live site — this has already produced one confidently
 wrong answer about whether a record existed. To inspect real data, use the
 deployed app or its API, not local Prisma.
+
+# Keep the system diagram current
+
+`docs/diagrams/system-architecture.json` is the architecture source of truth
+(archify). When a change adds, removes, renames, or re-wires a component,
+boundary, data store, external service, or runtime process, or changes how
+data flows between them, edit that JSON in the same change and render it:
+
+```bash
+npm run diagram:render
+```
+
+Commit the JSON and HTML together. Never put a real person's name, email, or
+phone number in it.
+
+This is enforced: inside Claude Code, the pre-commit hook refuses a commit that
+touches a structural path (`src/app/api/`, `src/lib/`, a page, `src/proxy.ts`,
+`vercel.json`, `calendly-extension/`, `scripts/`, a Prisma model, a dependency)
+without the JSON. If you looked and the diagram is unaffected, say so:
+
+```bash
+DIAGRAM_UNCHANGED=1 git commit ...
+```
+
+The post-commit hook re-renders the HTML whenever the JSON changes and commits
+the render on top. `npm run diagram` opens a live view that reloads on every
+change. Spec: `docs/superpowers/specs/2026-09-21-live-system-diagram-design.md`.

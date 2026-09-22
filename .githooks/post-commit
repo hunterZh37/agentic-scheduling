@@ -1,0 +1,46 @@
+#!/bin/sh
+# Re-render docs/diagrams/system-architecture.html whenever the archify JSON
+# changes, and commit the render on top. For a commit made outside Claude Code
+# that changed the system's shape without the diagram, log the drift (there is
+# no background agent here, by decision).
+# Installed via `git config core.hooksPath .githooks` (npm run hooks:install).
+# Spec: docs/superpowers/specs/2026-09-21-live-system-diagram-design.md
+
+[ -n "$ARCHIFY_HOOK" ] && exit 0
+cd "$(git rev-parse --show-toplevel)" || exit 0
+json=docs/diagrams/system-architecture.json
+html=docs/diagrams/system-architecture.html
+archify="$HOME/.claude/skills/archify/bin/archify.mjs"
+sha=$(git rev-parse --short HEAD)
+gitdir=$(git rev-parse --git-dir)
+log="$gitdir/archify.log"
+
+if git diff-tree --root --no-commit-id --name-only -r HEAD | grep -qx "$json"; then
+  if [ ! -f "$archify" ]; then
+    echo "diagram: $archify not found, HTML not re-rendered" >&2
+    echo "$(date '+%FT%T') $sha archify-missing" >> "$log"
+  elif node "$archify" deliver architecture "$json" "$html" --quality showcase --json > "$gitdir/archify.last-output" 2>&1; then
+    if git diff --quiet -- "$html"; then
+      echo "$(date '+%FT%T') $sha rendered, html unchanged" >> "$log"
+    else
+      ARCHIFY_HOOK=1 git commit -q -o -m "diagram: render $sha" -- "$html" \
+        && echo "$(date '+%FT%T') $sha rendered, committed $(git rev-parse --short HEAD)" >> "$log" \
+        && echo "diagram: rendered and committed as $(git rev-parse --short HEAD)"
+    fi
+  else
+    echo "diagram: deliver failed for $sha, see $gitdir/archify.last-output" >&2
+    echo "$(date '+%FT%T') $sha deliver-failed" >> "$log"
+  fi
+  exit 0
+fi
+
+# Drift made outside Claude Code (pre-commit only gates Claude Code sessions).
+[ "$CLAUDECODE" = "1" ] && exit 0
+[ "$DIAGRAM_UNCHANGED" = "1" ] && exit 0
+[ -f tools/diagram-drift.mjs ] || exit 0
+reasons=$(node tools/diagram-drift.mjs --commit HEAD 2>/dev/null)
+if [ $? -eq 1 ]; then
+  echo "$(date '+%FT%T') $sha drift: $(printf '%s' "$reasons" | tr '\n' ';')" >> "$log"
+  echo "diagram: $sha may have changed the system's shape; update $json (log: $log)"
+fi
+exit 0

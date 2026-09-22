@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tools/**/*.test.ts", "docs/diagrams/*.test.ts"],
     // Pin owner identity to the generic template placeholder so tests are
     // hermetic and match CI (which has no .env). Without this, a local .env
     // setting NEXT_PUBLIC_OWNER_NAME (e.g. "Hunter Zhang" for the dev server)

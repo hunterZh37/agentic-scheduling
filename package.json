@@ -16,7 +16,10 @@
     "verify": "tsc --noEmit && vitest run && node scripts/smoke.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "audit:mobile": "node scripts/mobile-audit.mjs",
-    "test:messaging": "node scripts/messaging-live-test.mjs"
+    "test:messaging": "node scripts/messaging-live-test.mjs",
+    "diagram": "node tools/diagram-live.mjs",
+    "diagram:render": "node \"$HOME/.claude/skills/archify/bin/archify.mjs\" deliver architecture docs/diagrams/system-architecture.json docs/diagrams/system-architecture.html --quality showcase --json",
+    "postinstall": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,0 +1,440 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Agentic Scheduling System Architecture",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1290,
+      600
+    ],
+    "views": [
+      {
+        "id": "booking",
+        "label": "Booking path",
+        "focus": [
+          "visitor",
+          "proxy",
+          "api-public",
+          "availability",
+          "booking",
+          "calendars",
+          "db"
+        ],
+        "note": "Visitors see only free time, merged live from every calendar; the booking is revalidated against the same sources before it is written."
+      },
+      {
+        "id": "owner",
+        "label": "Owner and agents",
+        "focus": [
+          "owner",
+          "proxy",
+          "api-private",
+          "agents",
+          "anthropic",
+          "db"
+        ],
+        "note": "Behind the session gate the owner edits the real schedule directly or through the private agent: dashboard, WhatsApp, SMS, Slack, MCP."
+      },
+      {
+        "id": "messaging",
+        "label": "Alerts, reminders, jobs",
+        "focus": [
+          "crons",
+          "notify",
+          "twilio",
+          "resend",
+          "db"
+        ],
+        "note": "Vercel crons drive reminders, the morning brief, carry-forward, monitoring and the reputation audit; every send uses one notify pipeline."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "visitor",
+      "type": "external",
+      "label": "Visitor",
+      "sublabel": "/book, /manage, chat",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "owner",
+      "type": "external",
+      "label": "Owner",
+      "sublabel": "web, phone, Slack, MCP",
+      "pos": [
+        40,
+        370
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "proxy",
+      "type": "security",
+      "label": "Auth gate",
+      "sublabel": "src/proxy.ts",
+      "pos": [
+        240,
+        150
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "api-public",
+      "type": "backend",
+      "label": "Public APIs",
+      "sublabel": "slots, bookings, chat",
+      "pos": [
+        440,
+        40
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "api-private",
+      "type": "backend",
+      "label": "Private APIs",
+      "sublabel": "schedule, todos, MCP",
+      "pos": [
+        440,
+        370
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "availability",
+      "type": "backend",
+      "label": "Availability engine",
+      "sublabel": "free/busy merge, slots",
+      "pos": [
+        640,
+        40
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "booking",
+      "type": "backend",
+      "label": "Booking service",
+      "sublabel": "revalidate, write, alert",
+      "pos": [
+        640,
+        150
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "agents",
+      "type": "backend",
+      "label": "Claude agents",
+      "sublabel": "private and public chat",
+      "pos": [
+        640,
+        480
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Neon Postgres",
+      "sublabel": "Prisma",
+      "brand": "neon",
+      "pos": [
+        640,
+        370
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "notify",
+      "type": "messagebus",
+      "label": "Notify pipeline",
+      "sublabel": "alerts, reminders, brief",
+      "pos": [
+        840,
+        260
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "crons",
+      "type": "cloud",
+      "label": "Cron jobs",
+      "sublabel": "reminders, brief, todos",
+      "brand": "vercel",
+      "pos": [
+        840,
+        370
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "calendars",
+      "type": "external",
+      "label": "Calendar providers",
+      "sublabel": "Google, Microsoft Graph",
+      "size": [
+        150,
+        64
+      ],
+      "pos": [
+        1090,
+        40
+      ]
+    },
+    {
+      "id": "anthropic",
+      "type": "external",
+      "label": "Anthropic API",
+      "sublabel": "tool-calling models",
+      "brand": "anthropic",
+      "pos": [
+        1090,
+        480
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "twilio",
+      "type": "external",
+      "label": "Twilio",
+      "sublabel": "WhatsApp, SMS, webhook",
+      "pos": [
+        1090,
+        260
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "resend",
+      "type": "external",
+      "label": "Resend",
+      "sublabel": "email",
+      "pos": [
+        1090,
+        370
+      ],
+      "size": [
+        150,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Vercel: Next.js app, Fluid Compute",
+      "wraps": [
+        "proxy",
+        "api-public",
+        "api-private",
+        "availability",
+        "booking",
+        "agents",
+        "db",
+        "notify",
+        "crons"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "External services",
+      "wraps": [
+        "calendars",
+        "twilio",
+        "resend",
+        "anthropic"
+      ],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "visitor-proxy",
+      "from": "visitor",
+      "to": "proxy",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "owner-proxy",
+      "from": "owner",
+      "to": "proxy",
+      "label": "session cookie"
+    },
+    {
+      "id": "proxy-public",
+      "from": "proxy",
+      "to": "api-public",
+      "label": "allowlisted paths",
+      "variant": "emphasis"
+    },
+    {
+      "id": "proxy-private",
+      "from": "proxy",
+      "to": "api-private",
+      "label": "owner only"
+    },
+    {
+      "id": "public-availability",
+      "from": "api-public",
+      "to": "availability",
+      "label": "open slots",
+      "variant": "emphasis",
+      "labelDy": -26
+    },
+    {
+      "id": "public-booking",
+      "from": "api-public",
+      "to": "booking",
+      "label": "book",
+      "variant": "emphasis"
+    },
+    {
+      "id": "private-db",
+      "from": "api-private",
+      "to": "db",
+      "label": "read, write",
+      "labelDy": -45
+    },
+    {
+      "id": "private-agents",
+      "from": "api-private",
+      "to": "agents",
+      "label": "private chat"
+    },
+    {
+      "id": "availability-calendars",
+      "from": "availability",
+      "to": "calendars",
+      "label": "free/busy",
+      "variant": "emphasis"
+    },
+    {
+      "id": "booking-availability",
+      "from": "booking",
+      "to": "availability",
+      "label": "revalidate"
+    },
+    {
+      "id": "booking-db",
+      "from": "booking",
+      "to": "db",
+      "label": "booking row",
+      "variant": "emphasis",
+      "labelAt": [
+        715,
+        292
+      ]
+    },
+    {
+      "id": "booking-calendars",
+      "from": "booking",
+      "to": "calendars",
+      "label": "event + invite",
+      "variant": "dashed"
+    },
+    {
+      "id": "booking-notify",
+      "from": "booking",
+      "to": "notify",
+      "label": "alert owner",
+      "toSide": "top"
+    },
+    {
+      "id": "agents-anthropic",
+      "from": "agents",
+      "to": "anthropic",
+      "label": "tool calls"
+    },
+    {
+      "id": "notify-twilio",
+      "from": "notify",
+      "to": "twilio",
+      "label": "WhatsApp, SMS"
+    },
+    {
+      "id": "notify-resend",
+      "from": "notify",
+      "to": "resend",
+      "label": "email"
+    },
+    {
+      "id": "crons-notify",
+      "from": "crons",
+      "to": "notify",
+      "label": "due sends"
+    },
+    {
+      "id": "crons-db",
+      "from": "crons",
+      "to": "db",
+      "label": "carry-forward",
+      "labelDy": -45
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One busy calculation",
+      "items": [
+        "Slot list, write guard, joint pages and the Calendly check share actionableBusy",
+        "Carried-over actionables reserve their time before the row exists"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Public means free/busy only",
+      "items": [
+        "Visitors, the public agent and unauthenticated MCP never see titles or attendees",
+        "Every alert and reminder leaves through the notify pipeline"
+      ]
+    }
+  ]
+}

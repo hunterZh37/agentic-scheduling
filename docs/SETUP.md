@@ -14,6 +14,12 @@ live." Each section maps a service to the exact variables in `.env`.
 
 ---
 
+## Git hooks
+
+`npm install` points `core.hooksPath` at `.githooks` (see `postinstall`), so the
+pre-push checks and the system-diagram guard run in every clone. If hooks are
+not firing, run `npm run hooks:install`.
+
 ## What unlocks what
 
 | You want… | Set up | Variables |
