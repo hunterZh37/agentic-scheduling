@@ -231,6 +231,12 @@ the size widens the control and reintroduces #17.
 |---|---|---|---|
 | 46 | Confirmation panels and sheets were never checked on a phone | `audit:mobile` loaded five PUBLIC PAGES and never opened an overlay, so every dialog, sheet and modal was outside it — and it reported "mobile clean" the whole time. Opening them found: the calendars "Bookings" badge hanging 33px off a 320px screen, two date inputs overflowing the block sheet, a 15px input (iOS zooms and never zooms back), and ~100 controls under the 44px tap floor including both ConfirmDialog buttons | `audit:mobile` now opens 6 overlays per device (18 per run) and measures inside them; runs in the pre-push hook whenever `.tsx`/`.css` changes |
 
+**Watch:** `scrollIntoView` scrolls every scrollable ancestor, including ones
+the user cannot scroll back (overflow hidden, or overscroll containment on the
+element under the pointer). To position something inside ONE list, set that
+list's `scrollTop`. And a nested scroller with `overscroll-behavior: contain`
+makes everything outside it unreachable from over it.
+
 **Watch:** an audit that only visits pages will pass forever while every
 interactive surface is broken. Anything reachable only after a click — a dialog,
 a sheet, an inline card — has to be opened by the audit or it is not covered.
@@ -283,6 +289,7 @@ reusing the production one.
 | 31 | Booking on a phone was hard: every opening on its own row, most of them below the fold, and picking a day appeared to do nothing | The slot list kept the desktop shape — one full-width time per row — which stacked to 888–1504px on a phone. And the calendar sits ABOVE the times on mobile, so a freshly picked day rendered its openings off-screen | `test` `npm run audit:mobile` (pre-push) · measured |
 | 30 | "The scrollable area for the slots is really small" on a phone | The slot list kept its desktop behaviour — a flex column with `overflow-y: auto`, capped at 320px on mobile — so the times scrolled INSIDE the page scroll. Two nested scroll regions, and on a day with one opening the box collapsed to a 46px sliver | `test` `npm run audit:mobile` (pre-push) · measured |
 | 19 | Tap targets below the 44px minimum | Booking date cells 34px, month arrows 28px, timezone select 20px tall | `test` `npm run audit:mobile` (pre-push) |
+| 63 | "The scrollable under Schedule is messed up. There are things hidden under the text Schedule and I cannot see them. I cannot scroll all the way to the top or scroll all the way to the bottom" | The Today list auto-centres the now-line once with `scrollIntoView`, which scrolls EVERY scrollable ancestor toward the element: with the in-progress item last in the list it also scrolled the pane (`.scroll`) behind the list by 60-70px. The inner list had `overscroll-behavior: contain`, so a wheel or finger over it could never move the pane back: the first rows stayed under the sticky "Today" header and the sections below stayed out of reach. Reproduced in Playwright (desktop and iPhone): pane scrollTop 61 / 72 after load, unchanged by wheeling either way | `test` `src/lib/dom/centerInScroller.test.ts` — the now-line is centred by setting the inner list's own `scrollTop` (`centeredScrollTop`, `nearestScroller`); source-level: `BlocksPane.tsx` contains no `scrollIntoView(`, and `.agendaList` has no `overscroll-behavior: contain`, so the inner list chains into the pane at its ends. The Playwright reproduction was a one-off, not checked in. `manual`: iOS momentum scrolling at the list's ends now carries into the pane by design; confirm on a real phone that it does not feel like a double bounce |
 
 Audit at real viewports (iPhone SE 320px / iPhone 13 390px / Pixel 7 412px),
 public pages, last run 2026-08-05:

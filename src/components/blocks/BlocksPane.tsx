@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSPr
 import { DateTime } from "luxon";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
 import { locationHref, locationLabel } from "@/lib/maps";
+import { centeredScrollTop, nearestScroller } from "@/lib/dom/centerInScroller";
 import { accountVar } from "@/lib/design/accounts";
 import { friendlyRecurrence, presetToRule, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
@@ -862,7 +863,11 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
     if (nowIndex < 0) return;
     const el = nowRef.current;
     if (!el || el.offsetParent === null) return;
-    el.scrollIntoView({ block: "center" });
+    // Scroll ONLY the list the now-line lives in. scrollIntoView would also
+    // scroll the pane behind it, and the pane could not be scrolled back from
+    // over the list (see docs/REGRESSIONS.md).
+    const list = nearestScroller<HTMLElement>(el, (n) => getComputedStyle(n));
+    if (list) list.scrollTop = centeredScrollTop(list, el);
     didAutoScrollRef.current = true;
   }, [nowIndex, active]);
 

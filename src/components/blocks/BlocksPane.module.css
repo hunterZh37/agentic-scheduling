@@ -107,7 +107,10 @@
   flex-direction: column;
   max-height: 52vh;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  /* No overscroll containment here: when this inner list reaches an end, the
+     scroll must carry on into the pane behind it, or whatever sits above or
+     below the list (the top rows under the sticky header, the sections
+     beneath) is unreachable from over the list. See docs/REGRESSIONS.md. */
   -webkit-overflow-scrolling: touch;
   padding-right: var(--space-2);
 }
