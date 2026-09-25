@@ -9,7 +9,6 @@ import { accountVar } from "@/lib/design/accounts";
 import { friendlyRecurrence, presetToRule, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
 import { EventModal } from "@/components/calendar/EventModal";
-import type { FollowupRow } from "@/components/calendar/EventFollowups";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Spinner } from "@/components/ui/Spinner";
 import type { CalendarItem, ItemAttendee } from "@/components/calendar/types";
@@ -18,32 +17,9 @@ import { agendaDetailItem, untimedTodoDetailItem, upcomingBookingDetailItem, typ
 import { dismissKey, visibleUpcomingBookings } from "./upcomingBookings";
 import { NewBlockSheet } from "./NewBlockSheet";
 import { RecurringModal } from "./RecurringModal";
-import { AgendaFollowups } from "./AgendaFollowups";
+import { progress, progressLabel } from "@/lib/todos/items";
 import { haptic } from "@/lib/motion/haptics";
 import styles from "./BlocksPane.module.css";
-
-/// Group flat follow-up rows by their eventKey (the agenda looks them up by an
-/// event row's key, which equals the follow-up's eventKey).
-function groupFollowups(rows: FollowupRow[]): Map<string, FollowupRow[]> {
-  const map = new Map<string, FollowupRow[]>();
-  for (const f of rows) {
-    const arr = map.get(f.eventKey);
-    if (arr) arr.push(f);
-    else map.set(f.eventKey, [f]);
-  }
-  return map;
-}
-
-/// Immutably replace one key's follow-up list in the grouped map.
-function updateFollowMap(
-  map: Map<string, FollowupRow[]>,
-  key: string,
-  fn: (list: FollowupRow[]) => FollowupRow[]
-): Map<string, FollowupRow[]> {
-  const next = new Map(map);
-  next.set(key, fn(next.get(key) ?? []));
-  return next;
-}
 
 export interface TodoRow {
   id: string;
@@ -65,6 +41,8 @@ export interface TodoRow {
   // Set when this todo was SEEDED by a recurring template ("pay rent, last day
   // of every month"). Null for a one-off. Drives the small "recurring" marker.
   recurringTodoId?: string | null;
+  /// The actionable's to-do list, in order. Progress ("1 of 3") is derived.
+  items?: { id: string; title: string; done: boolean; sortOrder: number }[];
 }
 /// A recurring actionable SCHEDULE (a RecurringTodo template), shown in its own
 /// section so a series is visible the moment it's set up — not only on the first
@@ -303,9 +281,6 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   const [itemSaving, setItemSaving] = useState(false);
   const [itemError, setItemError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  // Follow-up actionables, grouped by their event occurrence key (== agenda
-  // event row key). Loaded alongside the schedule; mutated optimistically.
-  const [followupsByKey, setFollowupsByKey] = useState<Map<string, FollowupRow[]>>(new Map());
   const [sheetOpen, setSheetOpen] = useState(false);
   // Live clock driving the red "now" marker in the agenda; ticks each minute.
   const [now, setNow] = useState<DateTime>(() => DateTime.now().setZone(OWNER_TIMEZONE));
@@ -354,13 +329,12 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
     const end = encodeURIComponent(day.endOf("day").toUTC().toISO()!);
     setLoading(true);
     try {
-      const [b, k, s, t, c, f, rc] = await Promise.all([
+      const [b, k, s, t, c, rc] = await Promise.all([
         fetch("/api/blocks").then((r) => r.json()),
         fetch("/api/bookings").then((r) => r.json()),
         fetch(`/api/schedule?start=${start}&end=${end}`).then((r) => r.json()),
         fetch(`/api/todos?date=${start}`).then((r) => r.json()),
         fetch("/api/checkoffs").then((r) => r.json()),
-        fetch("/api/followups").then((r) => r.json()),
         fetch("/api/recurring").then((r) => r.json()),
       ]);
       setBlocks(b.blocks ?? []);
@@ -386,53 +360,20 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
       setDayBirthdays((s.birthdays ?? []) as DayBirthdayRow[]);
       setTodos((t.todos ?? []) as TodoRow[]);
       setChecked(new Set((c.keys ?? []) as string[]));
-      setFollowupsByKey(groupFollowups((f.followups ?? []) as FollowupRow[]));
       setRecurring((rc.recurring ?? []) as RecurringRow[]);
     } finally {
       setLoading(false);
     }
   }, [isDemo, selectedDay]);
 
-  // Refetch just the follow-ups (used when the event modal closes — modal edits
-  // to follow-ups should show in the agenda without reloading the whole schedule).
-  const reloadFollowups = useCallback(async () => {
+  // Just the day's actionables: enough to refresh a "1 of 3" pill after an
+  // item is checked in the panel, without the six-endpoint full reload.
+  const reloadTodos = useCallback(async () => {
     if (isDemo) return;
-    const f = await fetch("/api/followups").then((r) => r.json()).catch(() => ({}));
-    setFollowupsByKey(groupFollowups((f.followups ?? []) as FollowupRow[]));
-  }, [isDemo]);
-
-  const addFollowup = async (eventKey: string, title: string) => {
-    if (isDemo) return;
-    try {
-      const res = await fetch("/api/followups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventKey, title }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (res.ok && d.followup) {
-        setFollowupsByKey((prev) => updateFollowMap(prev, eventKey, (list) => [...list, d.followup as FollowupRow]));
-      }
-    } catch {
-      /* ignore — user can retry */
-    }
-  };
-
-  const toggleFollowup = (eventKey: string, id: string, done: boolean) => {
-    setFollowupsByKey((prev) => updateFollowMap(prev, eventKey, (list) => list.map((f) => (f.id === id ? { ...f, done } : f))));
-    if (isDemo) return;
-    void fetch(`/api/followups/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ done }),
-    });
-  };
-
-  const deleteFollowup = (eventKey: string, id: string) => {
-    setFollowupsByKey((prev) => updateFollowMap(prev, eventKey, (list) => list.filter((f) => f.id !== id)));
-    if (isDemo) return;
-    void fetch(`/api/followups/${id}`, { method: "DELETE" });
-  };
+    const start = encodeURIComponent(selectedDay.toUTC().toISO()!);
+    const t = await fetch(`/api/todos?date=${start}`).then((r) => r.json()).catch(() => ({}));
+    if (t.todos) setTodos(t.todos as TodoRow[]);
+  }, [isDemo, selectedDay]);
 
   useEffect(() => {
     void reload();
@@ -812,6 +753,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
         done: t.done,
         carriedOver: !!t.rolledFromId,
         recurring: !!t.recurringTodoId,
+        items: t.items,
         location: t.location ?? undefined,
         videoLink: t.videoLink ?? undefined,
         phone: t.phone ?? undefined,
@@ -939,8 +881,8 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                   >
                     <span className={styles.rowTitleRow}>
                       <span className={styles.rowTitle}>{t.title}</span>
-                      <span className={styles.tag} style={{ color: "var(--accent)" }}>
-                        Actionable
+                      <span className={`${styles.tag} tnum`} style={{ color: "var(--accent)" }}>
+                        {progressLabel(progress(t.items ?? [])) ?? "Actionable"}
                       </span>
                     </span>
                     {(t.location || t.videoLink || t.phone || t.rolledFromId || t.recurringTodoId) && (
@@ -1169,8 +1111,8 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                       </li>
                     )}
                   {/* Reminders fire before the item, so their indicator sits
-                      ABOVE it — mirroring the follow-up row below. Shown for
-                      events and bookings (the items a reminder can attach to). */}
+                      ABOVE it. Shown for events and bookings (the items a
+                      reminder can attach to). */}
                   {(isEvent || item.kind === "booking") && !isDemo && (
                     <li className={styles.reminderRow}>
                       <ReminderControl
@@ -1248,7 +1190,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                             : item.kind === "block"
                               ? "Reserved"
                               : item.kind === "todo"
-                                ? "Actionable"
+                                ? (progressLabel(progress(item.items ?? [])) ?? "Actionable")
                                 : item.kind === "birthday"
                                   ? "Birthday"
                                   : "Booking"}
@@ -1313,14 +1255,6 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                       />
                     )}
                   </li>
-                  {isEvent && !isDemo && (
-                    <AgendaFollowups
-                      items={followupsByKey.get(item.key) ?? []}
-                      onToggle={(id, done) => toggleFollowup(item.key, id, done)}
-                      onDelete={(id) => deleteFollowup(item.key, id)}
-                      onAdd={(title) => void addFollowup(item.key, title)}
-                    />
-                  )}
                   </Fragment>
                 );
               })}
@@ -1625,17 +1559,12 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
       {detailItem && (
         <EventModal
           item={detailItem}
-          onClose={() => {
-            setDetailItem(null);
-            // Backstop: also refetch on close in case a write is still settling.
-            void reloadFollowups();
-          }}
+          onClose={() => setDetailItem(null)}
           onChanged={() => {
             void reload();
             onScheduleChange?.();
           }}
-          // Refetch as soon as each modal follow-up write resolves (race-free).
-          onFollowupsChanged={() => void reloadFollowups()}
+          onItemsChanged={() => void reloadTodos()}
         />
       )}
 

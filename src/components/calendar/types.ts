@@ -21,6 +21,8 @@ export interface CalendarItem {
   /// time. The detail panel once seeded a 9:00-9:30 slot here and showed it as
   /// if stored; the owner read it as real. See docs/REGRESSIONS.md.
   untimed?: boolean;
+  /// Actionables only: the to-do list, in order. Progress is derived from it.
+  items?: { id: string; title: string; done: boolean }[];
   /// Present for real calendar events — drives the account color.
   accountEmail?: string;
   // Detail (present mainly on real events; used by the event detail modal).

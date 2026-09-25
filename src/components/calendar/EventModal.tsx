@@ -9,11 +9,11 @@ import { accountVar, colorForEmail } from "@/lib/design/accounts";
 import { useAccountLabels } from "@/components/calendars/useAccountLabels";
 import { whenRow, editedTimes } from "./whenRow";
 import { sanitizeDescriptionHtml } from "@/lib/text/sanitizeDescriptionHtml";
-import { followupKey } from "@/lib/followups/key";
+import { progress, progressLabel } from "@/lib/todos/items";
 import { useSheetDrag } from "@/lib/motion/useSheetDrag";
 import { haptic } from "@/lib/motion/haptics";
 import ReminderControl from "@/components/reminders/ReminderControl";
-import { EventFollowups } from "./EventFollowups";
+import { TodoItems, TodoItemsEditor } from "./TodoItems";
 import type { CalendarItem } from "./types";
 import styles from "./EventModal.module.css";
 
@@ -94,15 +94,15 @@ export function EventModal({
   item,
   onClose,
   onChanged,
-  onFollowupsChanged,
+  onItemsChanged,
 }: {
   item: CalendarItem;
   onClose: () => void;
   /// Called after a successful edit/delete so the parent can refetch.
   onChanged?: () => void;
-  /// Called after a follow-up is added/toggled/deleted so the agenda can refetch
-  /// (fires once the write resolves — no race with the in-flight request).
-  onFollowupsChanged?: () => void;
+  /// Called after a to-do list item is checked, added or removed in view mode.
+  /// Cheaper than onChanged: the parent refetches only the day's actionables.
+  onItemsChanged?: () => void;
 }) {
   const start = DateTime.fromJSDate(item.start, { zone: "utc" }).setZone(OWNER_TIMEZONE);
   const end = DateTime.fromJSDate(item.end, { zone: "utc" }).setZone(OWNER_TIMEZONE);
@@ -137,6 +137,17 @@ export function EventModal({
   // (location / videoLink / phone) rather than one free-text field.
   const [fUrl, setFUrl] = useState(item.videoLink ?? "");
   const [fPhone, setFPhone] = useState(item.phone ?? "");
+  // The live to-do list (view mode checks and quick-adds land here), and the
+  // list as edited in edit mode, saved as one replacement list. The editor is
+  // re-seeded from the live list on entering edit mode so a quick-add made a
+  // moment earlier is never dropped by the replacement save.
+  const [liveItems, setLiveItems] = useState<{ id: string; title: string; done: boolean }[]>(item.items ?? []);
+  const [fItems, setFItems] = useState<{ id?: string; title: string; done: boolean }[]>(liveItems);
+  // Adds still in flight from the view-mode quick-add; Edit waits for them.
+  const [itemsPending, setItemsPending] = useState(0);
+  const itemsEdited = () =>
+    fItems.length !== liveItems.length ||
+    fItems.some((f, i) => f.id !== liveItems[i]?.id || f.title !== liveItems[i]?.title || f.done !== liveItems[i]?.done);
   const [fNotes, setFNotes] = useState(seedNotes);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +210,9 @@ export function EventModal({
             location: fLoc,
             videoLink: fUrl,
             phone: fPhone,
+            // Only send the replacement list when the editor changed it, so a
+            // title-only save never touches the items.
+            ...(itemsEdited() ? { items: fItems } : {}),
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -412,10 +426,20 @@ export function EventModal({
                   ? "Edit booking"
                   : "Edit event"
               : item.title}
+            {mode === "view" && isActionable && progressLabel(progress(liveItems)) && (
+              <span className={`${styles.titleProgress} tnum`}>{progressLabel(progress(liveItems))}</span>
+            )}
           </h2>
           <div className={styles.headActions}>
             {canEdit && mode === "view" && (
-              <button className={styles.editTop} onClick={() => setMode("edit")}>
+              <button
+                className={styles.editTop}
+                disabled={itemsPending > 0}
+                onClick={() => {
+                  setFItems(liveItems.map((i) => ({ id: i.id, title: i.title, done: i.done })));
+                  setMode("edit");
+                }}
+              >
                 Edit
               </button>
             )}
@@ -485,6 +509,7 @@ export function EventModal({
                   onChange={(e) => setFPhone(e.target.value)}
                   placeholder="Number to call"
                 />
+                <TodoItemsEditor items={fItems} onChange={setFItems} />
               </>
             )}
 
@@ -651,8 +676,14 @@ export function EventModal({
         </div>
         )}
 
-        {mode === "view" && item.kind === "event" && (
-          <EventFollowups eventKey={followupKey(item.id, item.start)} onChanged={onFollowupsChanged} />
+        {mode === "view" && isActionable && (
+          <TodoItems
+            todoId={providerId}
+            items={liveItems}
+            onItemsChange={setLiveItems}
+            onChanged={onItemsChanged ?? onChanged}
+            onPendingChange={setItemsPending}
+          />
         )}
 
         {mode === "view" && item.htmlLink && (

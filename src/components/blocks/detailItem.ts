@@ -11,7 +11,14 @@ import { HOST } from "@/lib/booking/publicConfig";
 /// here so the editor had a prefill, and the read view showed that as if it
 /// were stored (reported 2026-09-22). The editor now starts with empty times.
 export function untimedTodoDetailItem(
-  t: { id: string; title: string; location?: string | null; videoLink?: string | null; phone?: string | null },
+  t: {
+    id: string;
+    title: string;
+    location?: string | null;
+    videoLink?: string | null;
+    phone?: string | null;
+    items?: { id: string; title: string; done: boolean }[];
+  },
   day: DateTime
 ): CalendarItem {
   const anchor = day.startOf("day").toUTC().toJSDate();
@@ -22,6 +29,7 @@ export function untimedTodoDetailItem(
     start: anchor,
     end: anchor,
     untimed: true,
+    items: t.items,
     location: t.location ?? undefined,
     videoLink: t.videoLink ?? undefined,
     phone: t.phone ?? undefined,
@@ -67,7 +75,7 @@ export type AgendaItem = {
   // the full EventModal (mirrors CalendarItem's event-only fields). `location`
   // and `videoLink` are also reused (as "where" fields) by timed todos below.
   // `eventId` is the bare provider id (the row `key` also folds in the start);
-  // the modal needs the bare id for its provider edit/delete + follow-up key.
+  // the modal needs the bare id for its provider edit/delete.
   eventId?: string;
   accountEmail?: string;
   location?: string;
@@ -89,6 +97,8 @@ export type AgendaItem = {
   /// Todo-only: true when this actionable was seeded by a recurring schedule.
   /// Drives the small "recurring" marker.
   recurring?: boolean;
+  /// Todo-only: the to-do list. Drives the "1 of 3" pill and the panel's list.
+  items?: { id: string; title: string; done: boolean }[];
   // Block-only: the underlying PersonalBlock id, so a block row can persist its
   // crossed-off ("done") state via PATCH instead of the local `checked` set.
   blockId?: string;
@@ -112,8 +122,7 @@ export function agendaDetailItem(item: AgendaItem): CalendarItem | undefined {
     case "event":
       return {
         // Bare provider-id form (matches the calendar grid's `event:<id>`), so
-        // the modal's provider edit/delete and its follow-up key are correct.
-        // The occurrence's start is added back by followupKey(item.id, item.start).
+        // the modal's provider edit/delete is correct.
         id: `event:${item.eventId}`,
         kind: "event",
         title: item.title,
@@ -154,6 +163,7 @@ export function agendaDetailItem(item: AgendaItem): CalendarItem | undefined {
         location: item.location,
         videoLink: item.videoLink,
         phone: item.phone,
+        items: item.items,
       };
     case "birthday":
       return undefined;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { parseIsoDate } from "@/lib/validation";
+import { diffItems, parseIncomingItems, withItems, withProgress } from "@/lib/todos/items";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,9 @@ export const runtime = "nodejs";
 interface TodoBody {
   title?: string;
   done?: boolean;
+  /// Full replacement of the to-do list, in order: {id?, title, done?}. Ids the
+  /// todo owns are updated, missing ids are created, absent ids are deleted.
+  items?: unknown;
   // The calendar day this belongs to (day's start, UTC). Sent when a todo is
   // moved to another day: startTime/endTime alone would leave this stale and
   // the item would keep showing under its old day, since the agenda queries
@@ -96,9 +100,33 @@ export async function PATCH(
     }
   }
 
+  let incoming: ReturnType<typeof parseIncomingItems> | null = null;
+  if (body.items !== undefined) {
+    incoming = parseIncomingItems(body.items);
+    if ("error" in incoming) {
+      return NextResponse.json({ error: "invalid_input", message: incoming.error }, { status: 400 });
+    }
+  }
+
   try {
-    const todo = await prisma.todo.update({ where: { id }, data });
-    return NextResponse.json({ todo });
+    const todo = await prisma.$transaction(async (tx) => {
+      if (incoming && "items" in incoming) {
+        const existing = await tx.todoItem.findMany({ where: { todoId: id }, select: { id: true, title: true, done: true } });
+        const d = diffItems(existing, incoming.items);
+        if (d.delete.length) await tx.todoItem.deleteMany({ where: { id: { in: d.delete }, todoId: id } });
+        for (const u of d.update) {
+          // Scoped and count-tolerant: an item removed by another tab between
+          // the read and this write is simply gone, not a 404 for the todo.
+          await tx.todoItem.updateMany({
+            where: { id: u.id, todoId: id },
+            data: { title: u.title, done: u.done, sortOrder: u.sortOrder },
+          });
+        }
+        if (d.create.length) await tx.todoItem.createMany({ data: d.create.map((c) => ({ ...c, todoId: id })) });
+      }
+      return tx.todo.update({ where: { id }, data, include: withItems });
+    });
+    return NextResponse.json({ todo: withProgress(todo) });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
       return NextResponse.json({ error: "not_found" }, { status: 404 });

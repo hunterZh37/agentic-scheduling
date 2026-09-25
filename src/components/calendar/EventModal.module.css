@@ -295,82 +295,139 @@
   color: var(--accent);
 }
 
-/* --- Follow-ups section (view mode, events only) --- */
-.followups {
+/* --- To-do list (actionables). Rows are tall enough to tap; the check and
+   the remove control each own a 44px square. --- */
+.todoList {
   margin-top: var(--space-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
-.followHead {
+.todoHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   font-size: var(--type-caption);
   font-weight: 600;
   color: var(--text-2);
+  margin-bottom: var(--space-1);
 }
-.followItem {
+.todoProgress {
+  font-weight: 500;
+  color: var(--text-3);
+}
+.todoItem {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  min-height: 44px;
 }
-.followCheck {
+.todoCheck {
   flex: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.todoCheck::before {
+  content: "";
+  grid-area: 1 / 1;
   width: 18px;
   height: 18px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--hairline-strong);
   background: transparent;
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
 }
-.followCheck[data-done="true"] {
+.todoCheck[data-done="true"]::before {
   background: var(--accent);
   border-color: var(--accent);
 }
-.followTitle {
+.todoCheck svg {
+  grid-area: 1 / 1;
+}
+.todoTitle {
   flex: 1;
   min-width: 0;
   font-size: var(--type-callout);
   color: var(--text-1);
 }
-.followTitle[data-done="true"] {
+.todoTitle[data-done="true"] {
   text-decoration: line-through;
   color: var(--text-3);
 }
-.followTitle a {
+.todoTitle a {
   color: var(--accent);
   text-decoration: underline;
   word-break: break-word;
 }
-.followDelete {
+.todoDelete {
   flex: none;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--text-3);
-  font-size: var(--type-body);
-  line-height: 1;
   cursor: pointer;
-  padding: 0 var(--space-1);
+  display: grid;
+  place-items: center;
 }
-.followDelete:hover {
+.todoDelete:hover {
   color: var(--state-cancelled);
 }
-.followInput {
+.todoInput {
   margin-top: var(--space-1);
+  min-height: 44px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-1);
-  font-size: var(--type-callout);
+  font-size: 16px; /* iOS zooms into anything smaller */
   padding: var(--space-2) var(--space-3);
 }
-.followInput::placeholder {
+.todoInput::placeholder {
   color: var(--text-3);
+}
+.todoEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.todoEditRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.todoEditRow .fInput {
+  flex: 1;
+  min-width: 0;
+}
+.todoAddRow {
+  align-self: flex-start;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--type-callout);
+  cursor: pointer;
+  padding: 0 var(--space-2);
+}
+
+.titleProgress {
+  flex: none;
+  margin-left: var(--space-2);
+  font-size: var(--type-caption);
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 2px var(--space-2);
+  vertical-align: middle;
 }
 
 /* --- View footer: external link + Edit affordance --- */

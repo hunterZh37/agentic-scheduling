@@ -62,6 +62,27 @@ describe("carriedTodoData", () => {
     expect(c.startTime).toBeNull();
     expect(c.endTime).toBeNull();
   });
+
+  // Owner decision (2026-09-24): the copy brings the WHOLE to-do list with its
+  // done states, so "1 of 3" survives the roll-over.
+  it("copies the to-do list with done states and order", () => {
+    const items = [
+      { id: "i1", title: "Send the links", done: true, sortOrder: 0 },
+      { id: "i2", title: "Remove Stephanie", done: false, sortOrder: 1 },
+    ];
+    const c = carriedTodoData({ ...base, items }, day(2026, 6, 11), 0);
+    expect(c.items).toEqual({
+      create: [
+        { title: "Send the links", done: true, sortOrder: 0 },
+        { title: "Remove Stephanie", done: false, sortOrder: 1 },
+      ],
+    });
+  });
+
+  it("creates no items for a source without a list", () => {
+    const c = carriedTodoData(base, day(2026, 6, 11), 0);
+    expect(c.items).toBeUndefined();
+  });
 });
 
 describe("carryForwardTodos", () => {

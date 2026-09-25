@@ -46,9 +46,9 @@ export interface CalendarViewProps {
 /// React key for a rendered item.
 ///
 /// `item.id` is an IDENTITY ("event:<providerId>") and is parsed as one in three
-/// places — EventModal strips the prefix to get the provider id for edit and
-/// delete, and followupKey builds the occurrence key from it. So the occurrence
-/// start cannot be baked into the id itself.
+/// places, e.g. EventModal strips the prefix to get the provider id for edit
+/// and delete, and the check-off key is built from it. So the occurrence start
+/// cannot be baked into the id itself.
 ///
 /// It does have to be in the KEY: providers return the same event id for every
 /// occurrence of a recurring series, and an overnight item can put two

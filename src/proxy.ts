@@ -102,7 +102,7 @@ function isPublic(pathname: string): boolean {
   );
 }
 
-// Private API data (todos, schedule, blocks, bookings, followups, ...) is fetched
+// Private API data (todos, schedule, blocks, bookings, ...) is fetched
 // live and mutated through Alex + the panes. Without an explicit no-store, iOS
 // Safari serves the post-mutation refetch from its own HTTP cache, so a change
 // the owner just made via Alex ("says done") doesn't appear on mobile until a

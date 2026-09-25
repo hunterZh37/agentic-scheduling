@@ -123,7 +123,7 @@ flowchart TB
 ```
 
 Booking, agents, reminders, and calendar extras (personal blocks, birthdays,
-follow-ups) are plain JSON APIs under `src/app/api/`, so you can reuse them from any
+to-do lists) are plain JSON APIs under `src/app/api/`, so you can reuse them from any
 client.
 
 ## Upcoming

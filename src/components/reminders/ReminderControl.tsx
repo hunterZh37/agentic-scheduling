@@ -8,7 +8,7 @@ import { leadTimeFireAt, type LeadPreset } from "@/lib/nudge/leadTime";
 import styles from "./ReminderControl.module.css";
 
 interface ItemRef {
-  kind: "event" | "booking" | "todo" | "followup";
+  kind: "event" | "booking" | "todo";
   id: string;
   account?: string;
 }
@@ -18,7 +18,7 @@ interface ReminderControlProps {
   startISO?: string | null;
   itemRef: ItemRef;
   /// Show this item's set reminders as an inline list next to the bell (used in
-  /// the event modal). Compact rows (todos/follow-ups) leave it off.
+  /// the event modal). Compact rows (todos) leave it off.
   inlineList?: boolean;
   /// One-line mode (Blocks agenda): bell + each reminder's time inline on a
   /// single row, no "Reminders" label. Empty state is just the bell.
@@ -68,7 +68,7 @@ function customLocalToISO(value: string): string | undefined {
 }
 
 /// Bell button + small anchored popover for setting a one-off reminder on an
-/// event/booking/todo/followup. Fills in when the item already has ≥1
+/// event/booking/todo. Fills in when the item already has ≥1
 /// reminder (matched by eventKind/eventId).
 export default function ReminderControl({ title, startISO, itemRef, inlineList, compact }: ReminderControlProps) {
   const [open, setOpen] = useState(false);
@@ -135,7 +135,7 @@ export default function ReminderControl({ title, startISO, itemRef, inlineList, 
     }
     // For events/bookings, pass the event's day so the worker can re-read its
     // live details at fire time. Without eventDateISO the resolver bails and the
-    // reminder sends only the static title. Todos/follow-ups are static (no ref day).
+    // reminder sends only the static title. Todos are static (no ref day).
     const eventDateISO =
       (itemRef.kind === "event" || itemRef.kind === "booking") && startISO ? startISO : undefined;
     setBusy(true);

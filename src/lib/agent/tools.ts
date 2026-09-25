@@ -9,7 +9,7 @@ import { getScheduleView } from "@/lib/schedule/service";
 import { createBooking, cancelBooking, BookingError, rescheduleBooking } from "@/lib/booking/service";
 import { createDestinationEvent, updateDestinationEvent, deleteDestinationEvent } from "@/lib/calendar/write";
 import { isValidTimezone } from "@/lib/validation";
-import { followupKey } from "@/lib/followups/key";
+import { diffItems, progress, withItems } from "@/lib/todos/items";
 import { createNudge, listUpcomingNudges, cancelNudge } from "@/lib/nudge/service";
 import { nextOccurrence, createRecurringActionable } from "@/lib/todos/recurring";
 import { runFindMutualTimes, type FindMutualTimesArgs } from "./mutualSlots";
@@ -537,12 +537,21 @@ export function createActionableTool() {
         endISO: { type: "string", description: "Optional timed end (ISO 8601 UTC). If set, startISO is required." },
         location: { type: "string", description: "In-person location." },
         videoLink: { type: "string", description: "Online meeting URL." },
+        items: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Optional to-do list under this actionable, in order. Use it when the owner's request names one task " +
+            "with several parts or lists steps: ONE actionable with items, not one actionable per line.",
+        },
       },
       required: ["title", "dayISO"],
     },
     run: async (input) => {
       const title = (input.title as string)?.trim();
       if (!title) return JSON.stringify({ error: "missing_title", message: "A title is required." });
+      const itemTitles = Array.isArray(input.items) ? (input.items as unknown[]).filter((t): t is string => typeof t === "string") : [];
+      const { create: items } = diffItems([], itemTitles.map((t) => ({ title: t })));
 
       // The day the actionable belongs to, as the app's stable day key: the
       // owner-local midnight of dayISO, stored as a UTC instant (matches how the
@@ -626,10 +635,19 @@ export function createActionableTool() {
           location: location ?? null,
           videoLink: videoLink ?? null,
           sortOrder: (last?.sortOrder ?? -1) + 1,
+          items: { create: items },
         },
+        include: withItems,
       });
 
-      return JSON.stringify({ ok: true, todoId: todo.id, timed: !!(start && end) });
+      const created = Array.isArray(todo.items) ? todo.items : [];
+      return JSON.stringify({
+        ok: true,
+        todoId: todo.id,
+        timed: !!(start && end),
+        items: created.map((i) => ({ id: i.id, title: i.title, done: i.done })),
+        progress: progress(created),
+      });
     },
   });
 }
@@ -658,6 +676,7 @@ export function listActionablesTool() {
       const todos = await prisma.todo.findMany({
         where: { date: day.startOf("day").toUTC().toJSDate() },
         orderBy: { sortOrder: "asc" },
+        include: withItems,
       });
       return JSON.stringify({
         actionables: todos.map((t) => ({
@@ -669,6 +688,8 @@ export function listActionablesTool() {
           location: t.location,
           videoLink: t.videoLink,
           phone: t.phone,
+          items: t.items.map((i) => ({ id: i.id, title: i.title, done: i.done })),
+          progress: progress(t.items),
         })),
       });
     },
@@ -1158,139 +1179,96 @@ export function deletePersonalBlockTool() {
 }
 
 // ---------------------------------------------------------------------------
-// Follow-up actionables attached to a specific event OCCURRENCE. These are the
-// same rows the modal/agenda show — keyed by "event:<providerId>:<startISO>"
-// via followupKey. The agent identifies the occurrence with the id + start it
-// got from get_schedule; the tools build the key so the agent never has to.
+// To-do lists under an actionable (replaced event follow-ups, 2026-09-24).
+// A list-shaped request ("for the Keith meeting: send the links, remove
+// Stephanie from Salesforce") is ONE actionable with items, never one
+// actionable per line. Progress ("1 of 3") is derived; finishing every item
+// does not complete the actionable.
 // ---------------------------------------------------------------------------
 
-// Resolve the occurrence key from a get_schedule (eventId, startISO) pair, or an
-// error payload the tool can return verbatim.
-function resolveFollowupKey(eventId: unknown, startISO: unknown): string | { error: string; message: string } {
-  if (!eventId || typeof eventId !== "string") {
-    return { error: "missing_event", message: "eventId is required (get it from get_schedule)." };
+async function ownedTodo(actionableId: unknown): Promise<{ id: string } | { error: string; message: string }> {
+  if (typeof actionableId !== "string" || !actionableId) {
+    return { error: "missing_actionable", message: "actionableId is required (from list_actionables)." };
   }
-  if (!startISO || typeof startISO !== "string") {
-    return { error: "missing_start", message: "startISO is required (the occurrence start, from get_schedule)." };
-  }
-  const start = new Date(startISO);
-  if (isNaN(start.getTime())) return { error: "invalid_start", message: "startISO is not a valid date." };
-  return followupKey(eventId, start);
+  const todo = await prisma.todo.findUnique({ where: { id: actionableId }, select: { id: true } });
+  return todo ?? { error: "not_found", message: "No actionable with that id." };
 }
 
-export function listFollowupsTool() {
+export function addTodoItemsTool() {
   return betaTool({
-    name: "list_followups",
+    name: "add_todo_items",
     description:
-      "List the follow-up action items attached to a specific event occurrence. Get the event's id and " +
-      "start from get_schedule first, then pass them here. Returns each follow-up's id, title, and done state.",
+      "Append items to an actionable's to-do list. Get the actionable's id from list_actionables (or from " +
+      "create_actionable's result). Pass the items as short imperative titles, in order. Items render as " +
+      "markdown: write a link as [label](https://…), never a bare URL.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
       properties: {
-        eventId: { type: "string", description: "Provider event id (from get_schedule)." },
-        startISO: { type: "string", description: "The occurrence's start time, ISO 8601 UTC (from get_schedule)." },
+        actionableId: { type: "string" },
+        titles: { type: "array", items: { type: "string" }, minItems: 1 },
       },
-      required: ["eventId", "startISO"],
+      required: ["actionableId", "titles"],
     },
     run: async (input) => {
-      const key = resolveFollowupKey(input.eventId, input.startISO);
-      if (typeof key !== "string") return JSON.stringify(key);
-      const followups = await prisma.eventFollowup.findMany({
-        where: { eventKey: key },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      });
-      return JSON.stringify({ followups: followups.map((f) => ({ id: f.id, title: f.title, done: f.done })) });
+      const owner = await ownedTodo(input.actionableId);
+      if ("error" in owner) return JSON.stringify(owner);
+      const titles = Array.isArray(input.titles) ? (input.titles as unknown[]).filter((t): t is string => typeof t === "string") : [];
+      const existing = await prisma.todoItem.findMany({ where: { todoId: owner.id }, orderBy: { sortOrder: "desc" }, take: 1 });
+      const base = (existing[0]?.sortOrder ?? -1) + 1;
+      const { create } = diffItems([], titles.map((title) => ({ title })));
+      if (create.length === 0) return JSON.stringify({ error: "missing_titles", message: "At least one non-empty title is required." });
+      await prisma.todoItem.createMany({ data: create.map((c) => ({ ...c, sortOrder: base + c.sortOrder, todoId: owner.id })) });
+      const items = await prisma.todoItem.findMany({ where: { todoId: owner.id }, orderBy: { sortOrder: "asc" } });
+      return JSON.stringify({ ok: true, actionableId: owner.id, items: items.map((i) => ({ id: i.id, title: i.title, done: i.done })), progress: progress(items) });
     },
   });
 }
 
-export function addFollowupTool() {
+export function setTodoItemDoneTool() {
   return betaTool({
-    name: "add_followup",
+    name: "set_todo_item_done",
     description:
-      "Attach a follow-up action item to a specific event occurrence (e.g. 'email the notes', 'send the deck', " +
-      "'book a follow-up call'). Get the event's id and start from get_schedule first. Confirm the item with " +
-      "the owner before calling.",
+      "Check off (or reopen) one item of an actionable's to-do list. When the owner says they finished " +
+      "something that matches an item, mark the ITEM, not the whole actionable. Get ids from list_actionables.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
       properties: {
-        eventId: { type: "string", description: "Provider event id (from get_schedule)." },
-        startISO: { type: "string", description: "The occurrence's start time, ISO 8601 UTC (from get_schedule)." },
-        title: {
-          type: "string",
-          description:
-            "The follow-up action item text. Titles render as markdown, so wrap any URL in a short " +
-            "markdown link like [notes](https://…) or [spreadsheet](https://…) rather than pasting the " +
-            "raw link — pick a concise label from context (the doc's purpose or its title). Never put a " +
-            "bare URL in the title.",
-        },
+        actionableId: { type: "string" },
+        itemId: { type: "string" },
+        done: { type: "boolean", description: "Defaults to true." },
       },
-      required: ["eventId", "startISO", "title"],
+      required: ["actionableId", "itemId"],
     },
     run: async (input) => {
-      const key = resolveFollowupKey(input.eventId, input.startISO);
-      if (typeof key !== "string") return JSON.stringify(key);
-      const title = (input.title as string).trim();
-      if (!title) return JSON.stringify({ error: "empty_title", message: "The follow-up needs a title." });
-      const last = await prisma.eventFollowup.findFirst({
-        where: { eventKey: key },
-        orderBy: { sortOrder: "desc" },
-        select: { sortOrder: true },
-      });
-      const followup = await prisma.eventFollowup.create({
-        data: { eventKey: key, title, sortOrder: (last?.sortOrder ?? -1) + 1 },
-      });
-      return JSON.stringify({ ok: true, id: followup.id, title: followup.title });
+      const owner = await ownedTodo(input.actionableId);
+      if ("error" in owner) return JSON.stringify(owner);
+      const done = input.done === undefined ? true : !!input.done;
+      const r = await prisma.todoItem.updateMany({ where: { id: input.itemId as string, todoId: owner.id }, data: { done } });
+      if (r.count === 0) return JSON.stringify({ error: "not_found", message: "No such item on that actionable." });
+      const items = await prisma.todoItem.findMany({ where: { todoId: owner.id }, orderBy: { sortOrder: "asc" } });
+      return JSON.stringify({ ok: true, progress: progress(items) });
     },
   });
 }
 
-export function completeFollowupTool() {
+export function removeTodoItemTool() {
   return betaTool({
-    name: "complete_followup",
-    description:
-      "Mark a follow-up action item done (or reopen it). Get its id from list_followups first. " +
-      "Pass done: false to reopen a completed item.",
+    name: "remove_todo_item",
+    description: "Remove one item from an actionable's to-do list. Get ids from list_actionables. Confirm first.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
-      properties: {
-        id: { type: "string", description: "Follow-up id (from list_followups)." },
-        done: { type: "boolean", description: "true to mark done, false to reopen. Defaults to true." },
-      },
-      required: ["id"],
+      properties: { actionableId: { type: "string" }, itemId: { type: "string" } },
+      required: ["actionableId", "itemId"],
     },
     run: async (input) => {
-      const done = input.done === undefined ? true : input.done === true;
-      try {
-        await prisma.eventFollowup.update({ where: { id: input.id as string }, data: { done } });
-        return JSON.stringify({ ok: true, id: input.id, done });
-      } catch {
-        return JSON.stringify({ error: "not_found" });
-      }
-    },
-  });
-}
-
-export function deleteFollowupTool() {
-  return betaTool({
-    name: "delete_followup",
-    description: "Delete a follow-up action item by id (get the id from list_followups first).",
-    inputSchema: {
-      type: "object",
-      additionalProperties: false,
-      properties: { id: { type: "string" } },
-      required: ["id"],
-    },
-    run: async ({ id }) => {
-      try {
-        await prisma.eventFollowup.delete({ where: { id: id as string } });
-        return JSON.stringify({ ok: true });
-      } catch {
-        return JSON.stringify({ error: "not_found" });
-      }
+      const owner = await ownedTodo(input.actionableId);
+      if ("error" in owner) return JSON.stringify(owner);
+      const r = await prisma.todoItem.deleteMany({ where: { id: input.itemId as string, todoId: owner.id } });
+      if (r.count === 0) return JSON.stringify({ error: "not_found", message: "No such item on that actionable." });
+      return JSON.stringify({ ok: true });
     },
   });
 }

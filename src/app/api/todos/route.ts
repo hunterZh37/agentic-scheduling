@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseIsoDate } from "@/lib/validation";
+import { diffItems, parseIncomingItems, withItems, withProgress } from "@/lib/todos/items";
 
 export const runtime = "nodejs";
 
@@ -22,8 +23,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const todos = await prisma.todo.findMany({
     where: { date },
     orderBy: { sortOrder: "asc" },
+    include: withItems,
   });
-  return NextResponse.json({ todos });
+  return NextResponse.json({ todos: todos.map(withProgress) });
 }
 
 interface TodoBody {
@@ -36,6 +38,8 @@ interface TodoBody {
   location?: string;
   videoLink?: string;
   phone?: string;
+  /// Optional to-do list: titles (or {title, done}) in order.
+  items?: unknown;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -73,6 +77,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const parsedItems = body.items === undefined ? { items: [] } : parseIncomingItems(body.items);
+  if ("error" in parsedItems) {
+    return NextResponse.json({ error: "invalid_input", message: parsedItems.error }, { status: 400 });
+  }
+  const { create: items } = diffItems([], parsedItems.items);
+
   // New todos land at the end of the day's list.
   const last = await prisma.todo.findFirst({
     where: { date },
@@ -88,7 +98,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       videoLink: body.videoLink?.trim() || null,
       phone: body.phone?.trim() || null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
+      items: { create: items },
     },
+    include: withItems,
   });
-  return NextResponse.json({ todo }, { status: 201 });
+  return NextResponse.json({ todo: withProgress(todo) }, { status: 201 });
 }

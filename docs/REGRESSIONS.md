@@ -422,6 +422,20 @@ should not fire on a single press: a miss and a hit look identical.
 
 ## Blocks pane
 
+**Note (2026-09-24):** follow-ups (checklists on calendar EVENT occurrences)
+were replaced by to-do lists on ACTIONABLES, by owner decision. Every existing
+follow-up was converted by migration `20260924120000_add_todo_items_drop_followups`
+into an untimed actionable titled "Follow-ups from <day>" on the event's day,
+with the follow-ups as its items (the event's title was never stored, so the
+owner renames). Progress ("1 of 3") replaces the "Actionable" tag on the agenda
+row and shows in the panel header; finishing every item does not complete the
+actionable; carry-forward copies the list with done states. Alex creates ONE
+actionable with items for a list-shaped request (eval case
+`dash-10-list-becomes-one-actionable-with-items`). Guards: `items.test.ts`,
+`carryForward.test.ts`, `todoItemsTools.test.ts`; the "actionable to-do list"
+overlay in `audit:mobile` (optional: measured when a list exists on today).
+
+
 **Watch:** the carry-forward cron fires at a fixed **UTC** hour, but
 `carryForwardTodos` computes "today" in `OWNER_TIMEZONE`. It was `0 6 * * *`
 (6:00 UTC) while the owner is Pacific — 6:00 UTC is **11 PM Pacific the previous

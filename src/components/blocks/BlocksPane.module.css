@@ -269,8 +269,7 @@
    stayed at opacity 0 permanently while remaining tappable, so pressing it was
    aiming at something invisible. */
 @media (hover: none) {
-  .rowDelete,
-  .followDel {
+  .rowDelete {
     opacity: 0.6;
   }
 }
@@ -278,19 +277,8 @@
   color: var(--state-cancelled);
 }
 
-/* --- Follow-ups under an event row --- */
-/* Indent to line up under the event title (checkbox width + row gap). */
-.followRow {
-  list-style: none;
-  padding: 0 0 var(--space-2) calc(20px + var(--space-3));
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
 /* Reminder indicator ABOVE an event/booking row (reminders fire before it).
-   Same indentation as follow-ups so the reminder / item / follow-up stack lines
-   up under the item title. */
+   Indented under the item title (checkbox width + row gap). */
 .reminderRow {
   list-style: none;
   padding: var(--space-1) 0 2px calc(20px + var(--space-3));
@@ -301,88 +289,6 @@
 .reminderRow:empty {
   display: none;
 }
-.followItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.followCheck {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--hairline-strong);
-  background: transparent;
-  color: #fff;
-  font-size: 11px;
-  line-height: 1;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
-}
-.followCheck[data-done="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.followTitle {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--type-footnote);
-  color: var(--text-2);
-}
-.followTitle[data-done="true"] {
-  text-decoration: line-through;
-  color: var(--text-3);
-}
-.followTitle a {
-  color: var(--accent);
-  text-decoration: underline;
-  word-break: break-word;
-}
-.followDel {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  padding: 0 var(--space-1);
-  transition: opacity var(--dur-fast) var(--ease-standard);
-}
-.followItem:hover .followDel {
-  opacity: 1;
-}
-.followDel:hover {
-  color: var(--state-cancelled);
-}
-.followAddBtn {
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  color: var(--text-3);
-  font-size: var(--type-footnote);
-  cursor: pointer;
-  padding: 2px 0;
-}
-.followAddBtn:hover {
-  color: var(--accent);
-}
-.followInput {
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-1);
-  font-size: var(--type-footnote);
-  padding: var(--space-1) var(--space-2);
-  max-width: 260px;
-}
-.followInput::placeholder {
-  color: var(--text-3);
-}
-
 /* Show/hide toggle on a Reserved time row — always visible (unlike delete)
    since its icon also communicates the block's current visibility state. */
 /* Always-visible edit (pencil) affordance on a reserved-block row. Same footprint
@@ -698,8 +604,7 @@ input.chip:focus {
 @media (max-width: 768px) {
   /* Delete is hover-revealed on desktop; touch has no hover, so keep it visible
      (dimmed) so it stays reachable. */
-  .rowDelete,
-  .followDel {
+  .rowDelete {
     opacity: 0.6;
   }
   /* Bigger tap target for the "New block" (+) button. */

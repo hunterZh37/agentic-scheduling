@@ -12,6 +12,8 @@ export interface CarrySource {
   location: string | null;
   videoLink: string | null;
   phone: string | null;
+  /// The source's to-do list, copied whole (done states included).
+  items?: { title: string; done: boolean; sortOrder: number }[];
 }
 
 /// The `date` day-key for a luxon day: a UTC instant equal to owner-timezone
@@ -46,6 +48,9 @@ export function carriedTodoData(source: CarrySource, targetDay: DateTime, sortOr
     phone: source.phone,
     sortOrder,
     rolledFromId: source.id,
+    ...(source.items && source.items.length > 0
+      ? { items: { create: source.items.map((i) => ({ title: i.title, done: i.done, sortOrder: i.sortOrder })) } }
+      : {}),
   };
 }
 
@@ -63,6 +68,7 @@ export async function carryForwardTodos(
   const sources = await prisma.todo.findMany({
     where: { date: yesterdayKey, done: false },
     orderBy: { sortOrder: "asc" },
+    include: { items: { orderBy: { sortOrder: "asc" } } },
   });
   if (sources.length === 0) return { created: 0, considered: 0 };
 

@@ -66,6 +66,22 @@ const OVERLAYS = [
     tab: "Schedule",
     open: (page) => page.locator('[class*="rowBodyOpen"]').first().click({ timeout: CLICK_TIMEOUT }),
   },
+  {
+    // An actionable that has a to-do list: the panel's check rows, remove
+    // controls and quick-add input all have to clear the tap floor and the
+    // 16px input rule. Depends on data (a list on today), so it is optional:
+    // skipped with a note, not failed, when no such row exists.
+    name: "actionable to-do list",
+    tab: "Schedule",
+    optional: true,
+    open: (page) =>
+      page
+        .locator('[class*="rowBodyOpen"]')
+        .filter({ has: page.locator('[class*="tag"]', { hasText: /^\d+ of \d+$/i }) })
+        .first()
+        .click({ timeout: CLICK_TIMEOUT }),
+    expect: '[class*="todoList"]',
+  },
 ];
 
 const MIN_INPUT_FONT = 16; // below this, iOS zooms on focus and never zooms back
@@ -314,7 +330,11 @@ for (const dev of DEVICES) {
       await scenario.open(page);
       await page.waitForTimeout(700);
     } catch (err) {
-      problems.errors.push(`${dev} ${scenario.name}: could not open — ${String(err).split("\n")[0].slice(0, 90)}`);
+      if (scenario.optional) {
+        console.log(`  \x1b[2mskipped ${dev} ${scenario.name}: no matching row in this database\x1b[0m`);
+      } else {
+        problems.errors.push(`${dev} ${scenario.name}: could not open — ${String(err).split("\n")[0].slice(0, 90)}`);
+      }
       await page.close();
       continue;
     }

@@ -7,7 +7,7 @@ export interface CreateNudgeInput {
   fireAtISO: string;
   message: string;
   recurrenceRule?: string | null;
-  event?: { kind: "event" | "booking" | "todo" | "followup"; id: string; account?: string | null } | null;
+  event?: { kind: "event" | "booking" | "todo"; id: string; account?: string | null } | null;
   eventDateISO?: string | null;
 }
 

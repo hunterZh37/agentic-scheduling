@@ -134,16 +134,6 @@ model Checkoff {
 /// the SAME format as a Checkoff key — "event:<providerEventId>:<startISO>" — so
 /// each occurrence of a recurring event carries its own list. Local-only; never
 /// synced to the provider calendar.
-model EventFollowup {
-  id        String   @id @default(cuid())
-  eventKey  String
-  title     String
-  done      Boolean  @default(false)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-
-  @@index([eventKey])
-}
 
 /// A day-level to-do (e.g. "Take melatonin", "Buy groceries"), rendered atop
 /// the Today agenda. Not tied to any event or block — just a plain checklist
@@ -181,8 +171,26 @@ model Todo {
   recurringTodoId String?
   recurringTodo   RecurringTodo? @relation(fields: [recurringTodoId], references: [id], onDelete: SetNull)
 
+  /// The actionable's to-do list (sub-items). Deleting the actionable deletes
+  /// them. Replaced follow-ups on 2026-09-24; see the spec in docs/superpowers.
+  items TodoItem[]
+
   @@unique([recurringTodoId, date])
   @@index([date])
+}
+
+/// One line of an actionable's to-do list. Progress ("1 of 3") is derived, never
+/// stored. Finishing every item does NOT complete the actionable (owner decision).
+model TodoItem {
+  id        String   @id @default(cuid())
+  todoId    String
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  title     String
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([todoId, sortOrder])
 }
 
 /// A template that seeds a recurring actionable onto each of its due days, e.g.

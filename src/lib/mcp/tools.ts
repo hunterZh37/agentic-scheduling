@@ -1,5 +1,6 @@
 import { CreatedVia } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { diffItems } from "@/lib/todos/items";
 import { getAvailability } from "@/lib/availability/service";
 import { computeMutualSlots } from "@/lib/agent/mutualSlots";
 import { createBooking, BookingError } from "@/lib/booking/service";
@@ -332,6 +333,11 @@ const createActionableTool: McpTool = {
       dayISO: { type: "string", description: "Any instant on the target day; read in the owner's timezone." },
       startISO: { type: "string" },
       endISO: { type: "string" },
+      items: {
+        type: "array",
+        items: { type: "string" },
+        description: "Optional to-do list under the actionable, in order (one actionable with items, not one per line).",
+      },
     },
     required: ["title", "dayISO"],
   },
@@ -350,10 +356,12 @@ const createActionableTool: McpTool = {
       if (endTime <= startTime) throw new Error("endISO must be after startISO");
     }
     const last = await prisma.todo.findFirst({ where: { date: dayKey }, orderBy: { sortOrder: "desc" } });
+    const itemTitles = Array.isArray(a.items) ? (a.items as unknown[]).filter((t): t is string => typeof t === "string") : [];
+    const { create: items } = diffItems([], itemTitles.map((t) => ({ title: t })));
     const todo = await prisma.todo.create({
-      data: { title, date: dayKey, startTime, endTime, sortOrder: (last?.sortOrder ?? -1) + 1 },
+      data: { title, date: dayKey, startTime, endTime, sortOrder: (last?.sortOrder ?? -1) + 1, items: { create: items } },
     });
-    return { ok: true, todoId: todo.id, timed: !!(startTime && endTime) };
+    return { ok: true, todoId: todo.id, timed: !!(startTime && endTime), items: items.length };
   },
 };
 

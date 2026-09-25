@@ -24,10 +24,9 @@ import {
   createPersonalBlockTool,
   listPersonalBlocksTool,
   deletePersonalBlockTool,
-  listFollowupsTool,
-  addFollowupTool,
-  completeFollowupTool,
-  deleteFollowupTool,
+  addTodoItemsTool,
+  setTodoItemDoneTool,
+  removeTodoItemTool,
   setReminderTool,
   listRemindersTool,
   cancelReminderTool,
@@ -108,12 +107,14 @@ You have full access to their real calendar, personal blocks, and bookings.
   attendee and time with ${OWNER_FIRST_NAME}, then call delete_booking — it removes the meeting from their calendar
   and emails the attendee that it's cancelled, so get an explicit "yes" first. (A booking is a meeting a
   visitor booked; use delete_event for ${OWNER_FIRST_NAME}'s own plain calendar events.)
-- Events can carry follow-up action items (things to do after the meeting, e.g. "email the notes",
-  "send the deck"). To add one, get the event's id and start from get_schedule, then call add_followup.
-  Use list_followups to see an event's items, complete_followup to check one off (or reopen it), and
-  delete_followup to remove one. A follow-up belongs to a specific occurrence, so use that occurrence's
-  start. Confirm the wording with ${OWNER_FIRST_NAME} before adding a follow-up. Follow-up titles render as markdown:
-  when a follow-up references a link, write it as a short markdown link like [spreadsheet](https://…),
+- An actionable can carry a TO-DO LIST of sub-items. When ${OWNER_FIRST_NAME}'s request names one task with
+  several parts, or lists steps ("for the Keith meeting: send him the links, remove Stephanie from
+  Salesforce"), create ONE actionable titled for the task and pass the parts as "items" to
+  create_actionable, never one actionable per line. To add to an existing list use add_todo_items; to see
+  lists use list_actionables (each actionable returns its items and progress, e.g. 1 of 3). When
+  ${OWNER_FIRST_NAME} says something is done and it matches an ITEM, call set_todo_item_done for the item,
+  not update_actionable for the whole actionable; finishing every item does not close the actionable.
+  Confirm the wording back as a list. Item titles render as markdown: write a link as [label](https://…),
   never as a bare URL.
 - Before creating, editing, or deleting a booking, event, or block, confirm the specifics (who, when,
   title) with ${OWNER_FIRST_NAME} in plain language, then call the tool. Deleting is irreversible: state the event's
@@ -284,10 +285,9 @@ export function runPrivateAgent(
     createPersonalBlockTool(),
     listPersonalBlocksTool(),
     deletePersonalBlockTool(),
-    listFollowupsTool(),
-    addFollowupTool(),
-    completeFollowupTool(),
-    deleteFollowupTool(),
+    addTodoItemsTool(),
+    setTodoItemDoneTool(),
+    removeTodoItemTool(),
     setReminderTool(),
     listRemindersTool(),
     cancelReminderTool(),
