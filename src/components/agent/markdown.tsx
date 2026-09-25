@@ -13,16 +13,36 @@ function safeHref(url: string): string | null {
 // visual hierarchy instead of showing raw markers. Builds React elements
 // directly — no dangerouslySetInnerHTML. Shared by the private AgentPane, the
 // public booking chat, and the event follow-up rows.
+/// A bare URL lifted out of prose drags the sentence's punctuation with it.
+/// Trailing .,;:!?'" are never part of the link; a closing paren is only
+/// dropped when unbalanced, so a URL that really contains "(…)" survives.
+function trimBareUrl(url: string): string {
+  let u = url;
+  for (;;) {
+    const last = u[u.length - 1];
+    if (/[.,;:!?'"]/.test(last)) u = u.slice(0, -1);
+    else if (last === ")" && u.split("(").length <= u.split(")").length - 1) u = u.slice(0, -1);
+    else return u;
+  }
+}
+
 export function renderInline(text: string, keyBase: string): ReactNode[] {
   const out: ReactNode[] = [];
-  // Link first so [label](url) is consumed as a whole; then bold/strike/code.
-  const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~|`(.+?)`/g;
+  // Markdown link first so [label](url) is consumed as a whole; then a bare
+  // http(s) URL (agents and people paste those as often as markdown links,
+  // and an unclickable URL in a to-do item is a dead end); then bold /
+  // strike / code.
+  // A bare URL stops at whitespace, quotes, angle brackets, and the markdown
+  // markers (* ~ `), so "https://x**bold**" is a link followed by bold, not
+  // one broken link.
+  const re = /\[([^\]]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<>"'*~`]+)|\*\*(.+?)\*\*|~~(.+?)~~|`(.+?)`/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let i = 0;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const key = `${keyBase}-${i++}`;
+    let consumed = m[0].length;
     if (m[1] != null) {
       const href = safeHref(m[2]);
       if (href) {
@@ -35,10 +55,26 @@ export function renderInline(text: string, keyBase: string): ReactNode[] {
         // Unsafe/relative scheme: keep the raw text rather than a dead link.
         out.push(m[0]);
       }
-    } else if (m[3] != null) out.push(<strong key={key}>{m[3]}</strong>);
-    else if (m[4] != null) out.push(<del key={key}>{m[4]}</del>);
-    else out.push(<code key={key}>{m[5]}</code>);
-    last = m.index + m[0].length;
+    } else if (m[3] != null) {
+      const url = trimBareUrl(m[3]);
+      consumed = url.length;
+      // The regex already pins the scheme; safeHref is belt and braces so a
+      // loosened pattern later can never link another scheme.
+      const href = safeHref(url);
+      out.push(
+        href ? (
+          <a key={key} href={href} target="_blank" rel="noopener noreferrer">
+            {url}
+          </a>
+        ) : (
+          url
+        )
+      );
+    } else if (m[4] != null) out.push(<strong key={key}>{m[4]}</strong>);
+    else if (m[5] != null) out.push(<del key={key}>{m[5]}</del>);
+    else out.push(<code key={key}>{m[6]}</code>);
+    last = m.index + consumed;
+    re.lastIndex = last;
   }
   if (last < text.length) out.push(text.slice(last));
   return out;
