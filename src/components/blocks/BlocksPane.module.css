@@ -220,6 +220,9 @@
 .recur {
   font-weight: 500;
 }
+.recurEnded {
+  color: var(--state-cancelled);
+}
 /* Marks a to-do that rolled over from an unfinished one yesterday. A quiet
    amber nudge — visible enough to notice it slipped, not loud enough to alarm. */
 .carried {

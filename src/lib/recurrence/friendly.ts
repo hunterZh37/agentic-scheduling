@@ -1,3 +1,6 @@
+import { rrulestr } from "rrule";
+import { toFloating, floatingToZonedUtc } from "@/lib/availability/recurrence";
+import { DateTime } from "luxon";
 // Friendly recurrence <-> RRULE. The UI never shows a raw RRULE; it shows
 // presets ("Every night", "Mon · Wed · Fri", "Weekdays", "Weekly") and a custom
 // weekday chooser. These helpers convert both directions.
@@ -54,7 +57,58 @@ function sortDays(days: WeekdayCode[]): WeekdayCode[] {
 
 /// Human label for a block's recurrence. `isOvernight` distinguishes a nightly
 /// block ("Every night") from a daytime daily one ("Every day").
-export function friendlyRecurrence(rule: string | null, isOvernight = false): string {
+/// Where a rule stops, if it stops: the UNTIL instant, or for COUNT the start
+/// of the last occurrence (computed from the block's anchor in its zone, the
+/// way the availability engine expands it). Null = repeats forever.
+export function ruleEnd(rule: string | null, anchor: Date, zone: string): Date | null {
+  if (!rule) return null;
+  const until = ruleUntil(rule);
+  if (until) return until;
+  if (!/(?:^|;)COUNT=\d+/i.test(rule)) return null;
+  try {
+    const dtstart = toFloating(anchor, zone);
+    const all = rrulestr(`RRULE:${rule}`, { dtstart }).all();
+    if (all.length === 0) return anchor;
+    return floatingToZonedUtc(all[all.length - 1], zone);
+  } catch {
+    return null;
+  }
+}
+
+/// True when the rule has already stopped: the block reserves nothing now,
+/// whatever its frequency label says.
+export function recurrenceEnded(
+  rule: string | null,
+  anchor: Date,
+  zone: string,
+  now: Date = new Date()
+): boolean {
+  const end = ruleEnd(rule, anchor, zone);
+  return !!end && end.getTime() < now.getTime();
+}
+
+/// Human label for a block's recurrence. `isOvernight` distinguishes a nightly
+/// block ("Every night") from a daytime daily one ("Every day"). With `anchor`
+/// and `zone`, a rule that stops says so: "· until Dec 31, 2026" ahead of time,
+/// "· ended Jan 2, 2026" once past. An ended rule reserves NOTHING, and saying
+/// "Every night" for one is how a Sleep block quietly opened the small hours on
+/// the booking page for months. See docs/REGRESSIONS.md. The date is the day
+/// in the block's own zone, the day the owner picked, not the UTC day.
+export function friendlyRecurrence(
+  rule: string | null,
+  isOvernight = false,
+  when?: { anchor: Date; zone: string; now?: Date }
+): string {
+  const base = baseLabel(rule, isOvernight);
+  if (!when) return base;
+  const end = ruleEnd(rule, when.anchor, when.zone);
+  if (!end) return base;
+  const now = when.now ?? new Date();
+  const day = DateTime.fromJSDate(end, { zone: "utc" }).setZone(when.zone).toFormat("LLL d, yyyy");
+  return end.getTime() < now.getTime() ? `${base} · ended ${day}` : `${base} · until ${day}`;
+}
+
+function baseLabel(rule: string | null, isOvernight: boolean): string {
   const { freq, byday, bymonthday } = parseRule(rule);
   if (!freq) return "Once";
   if (freq === "DAILY") return isOvernight ? "Every night" : "Every day";

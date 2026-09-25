@@ -6,7 +6,7 @@ import { OWNER_TIMEZONE } from "@/lib/clientConfig";
 import { locationHref, locationLabel } from "@/lib/maps";
 import { centeredScrollTop, nearestScroller } from "@/lib/dom/centerInScroller";
 import { accountVar } from "@/lib/design/accounts";
-import { friendlyRecurrence, presetToRule, type RecurrencePreset } from "@/lib/recurrence/friendly";
+import { friendlyRecurrence, presetToRule, recurrenceEnded, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
 import { EventModal } from "@/components/calendar/EventModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -1279,6 +1279,9 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
               const start = new Date(block.startTime);
               const end = new Date(block.endTime);
               const overnight = isOvernight(start, end, block.timezone);
+              // The pane's minute clock, so server and client agree on "now".
+              const nowDate = now.toJSDate();
+              const ended = recurrenceEnded(block.recurrenceRule, start, block.timezone, nowDate);
               const colorVar = "--state-busy";
               const on = block.done;
               return (
@@ -1316,8 +1319,15 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                     <span className={styles.rowSub}>
                       <span className="tnum">{formatRange(start, end, block.timezone)}</span>
                       <span className={styles.dot}>·</span>
-                      <span className={styles.recur} style={{ color: `var(${colorVar})` }}>
-                        ↻ {friendlyRecurrence(block.recurrenceRule, overnight)}
+                      {/* An ended rule reserves NOTHING; say so in the warning
+                          colour rather than in the block's own colour, which
+                          reads as "active". See docs/REGRESSIONS.md. */}
+                      <span
+                        className={`${styles.recur} ${ended ? styles.recurEnded : ""}`}
+                        style={ended ? undefined : { color: `var(${colorVar})` }}
+                        title={ended ? "This block has ended and no longer reserves any time. Edit it to clear the end." : undefined}
+                      >
+                        ↻ {friendlyRecurrence(block.recurrenceRule, overnight, { anchor: start, zone: block.timezone, now: nowDate })}
                       </span>
                     </span>
                   </div>
