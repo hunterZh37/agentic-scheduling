@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { footerLines, footerHtml, type FooterLinks } from "./invite";
 import { ReminderRecipient } from "@prisma/client";
 import { OWNER_FIRST_NAME } from "@/lib/booking/publicConfig";
 
@@ -51,6 +52,9 @@ export function renderBookingDescription(input: {
   /// hostName/linkedinUrl so the attendee sees the whole team, not just the owner.
   hostLabel?: string;
   hosts?: SignatureHost[];
+  /// Consulting / GitHub / research links after the signature. The same footer
+  /// Alex's invites carry, so every invite the app sends looks the same.
+  footer?: FooterLinks;
 }): string {
   const startLocal = DateTime.fromJSDate(input.start, { zone: "utc" }).setZone(input.timezone);
   const endLocal = DateTime.fromJSDate(input.end, { zone: "utc" }).setZone(input.timezone);
@@ -91,6 +95,10 @@ export function renderBookingDescription(input: {
     lines.push(input.hostName);
     if (input.linkedinUrl) lines.push(`LinkedIn: ${input.linkedinUrl}`);
   }
+  if (input.footer) {
+    const foot = footerLines(input.footer);
+    if (foot.length) lines.push(``, ...foot);
+  }
   return lines.join("\n");
 }
 
@@ -119,6 +127,7 @@ export function renderBookingDescriptionHtml(input: {
   videoUrl?: string;
   hostLabel?: string;
   hosts?: SignatureHost[];
+  footer?: FooterLinks;
 }): string {
   const startLocal = DateTime.fromJSDate(input.start, { zone: "utc" }).setZone(input.timezone);
   const endLocal = DateTime.fromJSDate(input.end, { zone: "utc" }).setZone(input.timezone);
@@ -166,6 +175,7 @@ export function renderBookingDescriptionHtml(input: {
       : `It's on your calendar now. Need to reschedule or cancel? Just reply and <strong>${withWhom}</strong> will sort it out.<br><br>`) +
     `Looking forward to speaking with you!<br><br>` +
     `Best,<br>${signature}` +
+    (input.footer && footerHtml(input.footer) ? `<br><br>${footerHtml(input.footer)}` : "") +
     `</div>`
   );
 }

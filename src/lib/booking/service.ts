@@ -236,6 +236,7 @@ export async function createBooking(
     hostName: HOST.name,
     timezone: input.attendeeTimezone,
     linkedinUrl: HOST.linkedin,
+    footer: { consulting: HOST.practice.url, github: HOST.githubUrl, research: HOST.researchUrl },
     manageUrl,
     videoUrl: HOST.videoLink,
     // Joint booking: say "with <team>" and sign off from every host. Solo leaves
@@ -495,6 +496,7 @@ async function sendAttendeeConfirmation(
     hostName: HOST.name,
     timezone: booking.attendeeTimezone,
     linkedinUrl: HOST.linkedin,
+    footer: { consulting: HOST.practice.url, github: HOST.githubUrl, research: HOST.researchUrl },
     manageUrl,
     videoUrl: HOST.videoLink,
     hostLabel: team?.hostLabel,

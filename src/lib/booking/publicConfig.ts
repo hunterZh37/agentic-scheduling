@@ -60,6 +60,9 @@ export const HOST = {
   /// The owner's open-source mail and messages agent, advertised from the
   /// booking rail under the research link.
   messagingAgentUrl: "https://github.com/hunterZh37/messaging-agent",
+  /// The owner's GitHub profile: the invite footer's GitHub link. Env
+  /// overrides the default so a fork can point it elsewhere.
+  githubUrl: process.env.NEXT_PUBLIC_OWNER_GITHUB ?? "https://github.com/hunterZh37",
   /// Public source code of this app, linked from the booking rail. This app is
   /// open source; the link doubles as a trust signal for visitors.
   sourceUrl: "https://github.com/hunterZh37/agentic-scheduling",

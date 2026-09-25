@@ -13,6 +13,8 @@ import { diffItems, progress, withItems } from "@/lib/todos/items";
 import { createNudge, listUpcomingNudges, cancelNudge } from "@/lib/nudge/service";
 import { nextOccurrence, createRecurringActionable } from "@/lib/todos/recurring";
 import { runFindMutualTimes, type FindMutualTimesArgs } from "./mutualSlots";
+import { renderInviteDescription, renderInviteDescriptionHtml, type InviteInput } from "@/lib/notify/invite";
+import { HOST } from "@/lib/booking/publicConfig";
 
 // ---------------------------------------------------------------------------
 // Shared read tool — free/busy ONLY. Safe for the public agent: never returns
@@ -403,6 +405,82 @@ export function rescheduleBookingTool() {
   });
 }
 
+
+// ---------------------------------------------------------------------------
+// Invites (owner, 2026-09-24): create_event with guests. The body says where
+// to meet, in person or online, and ends with the owner's links.
+// ---------------------------------------------------------------------------
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseAttendees(raw: unknown): { list: { email: string; name?: string }[] } | { error: string; message: string } {
+  if (raw === undefined) return { list: [] };
+  if (!Array.isArray(raw)) return { error: "invalid_attendee", message: "attendees must be a list of {email, name?}." };
+  const seen = new Set<string>();
+  const list: { email: string; name?: string }[] = [];
+  for (const a of raw as unknown[]) {
+    const o = (a && typeof a === "object" ? a : {}) as { email?: unknown; name?: unknown };
+    const email = typeof o.email === "string" ? o.email.trim() : "";
+    if (!EMAIL.test(email)) return { error: "invalid_attendee", message: `Not an email address: ${String(o.email)}` };
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = typeof o.name === "string" && o.name.trim() ? o.name.trim() : undefined;
+    list.push({ email, name });
+  }
+  return { list };
+}
+
+function buildInvite(
+  input: Record<string, unknown>,
+  guests: { email: string; name?: string }[],
+  start: Date,
+  end: Date
+):
+  | { description: string; descriptionHtml: string; location: string; videoLink?: string; meeting: "in_person" | "online" }
+  | { error: string; message: string } {
+  const meeting = input.meeting === "in_person" || input.meeting === "online" ? input.meeting : null;
+  if (!meeting) {
+    return { error: "meeting_required", message: "With attendees, pass meeting: 'in_person' (with location) or 'online'." };
+  }
+  const location = (input.location as string | undefined)?.trim() || "";
+  const videoLink = (input.videoLink as string | undefined)?.trim() || HOST.videoLink || "";
+  if (meeting === "in_person" && !location) {
+    return { error: "location_required", message: "An in-person invite needs a location." };
+  }
+  if (meeting === "online" && !videoLink) {
+    return {
+      error: "no_video_link",
+      message: "No room link is configured (NEXT_PUBLIC_OWNER_VIDEO_LINK) and none was given; pass videoLink.",
+    };
+  }
+  if (meeting === "online" && !/^https?:\/\//i.test(videoLink)) {
+    return { error: "invalid_video_link", message: "videoLink must start with http:// or https://." };
+  }
+  const args: InviteInput = {
+    title: (input.title as string).trim(),
+    start,
+    end,
+    hostName: HOST.name,
+    timezone: OWNER_TIMEZONE,
+    attendeeNames: guests.map((g) => g.name ?? "").filter(Boolean),
+    meeting,
+    location: meeting === "in_person" ? location : undefined,
+    videoUrl: meeting === "online" ? videoLink : undefined,
+    note: (input.note as string | undefined)?.trim() || undefined,
+    links: { consulting: HOST.practice.url, github: HOST.githubUrl, research: HOST.researchUrl, linkedin: HOST.linkedin },
+  };
+  return {
+    description: renderInviteDescription(args),
+    descriptionHtml: renderInviteDescriptionHtml(args),
+    // The join link doubles as the location online, so calendar apps surface
+    // a join button, the same as bookings.
+    location: meeting === "in_person" ? location : videoLink,
+    videoLink: meeting === "online" ? videoLink : undefined,
+    meeting,
+  };
+}
+
 export function createEventTool() {
   return betaTool({
     name: "create_event",
@@ -413,7 +491,11 @@ export function createEventTool() {
       "Events CAN recur: pass recurrenceRule (an iCal RRULE, e.g. FREQ=WEEKLY;BYDAY=SU) plus timezone for " +
       "a repeating event. Recurrence is NOT limited to blocks. " +
       "By default the event lands on the owner's default (destination) calendar; to put it on a specific " +
-      "connected calendar, pass accountEmail (get the options from list_calendars).",
+      "connected calendar, pass accountEmail (get the options from list_calendars). " +
+      "To INVITE people, pass attendees (their emails, names if known) and meeting: 'in_person' with a " +
+      "location, or 'online' (the owner's fixed room link is used unless videoLink is given). The invite " +
+      "body then says where to meet and ends with the owner's consulting, GitHub and research links; " +
+      "the provider emails every guest, so confirm guests, time and place with the owner first.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -421,12 +503,30 @@ export function createEventTool() {
         title: { type: "string" },
         startISO: { type: "string", description: "Event start (first occurrence), ISO 8601 UTC." },
         endISO: { type: "string", description: "Event end (first occurrence), ISO 8601 UTC." },
+        attendees: {
+          type: "array",
+          description: "Guests to invite. Each gets the provider's invite email.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { email: { type: "string" }, name: { type: "string" } },
+            required: ["email"],
+          },
+        },
+        meeting: {
+          type: "string",
+          enum: ["in_person", "online"],
+          description: "Required with attendees: in_person (give location) or online (owner's room, or videoLink).",
+        },
+        videoLink: { type: "string", description: "Online only: a specific join link instead of the owner's room." },
+        note: { type: "string", description: "Optional agenda or context for the guests, shown in the invite body." },
         addVideoLink: {
           type: "boolean",
           description:
             "Create a real video-call link for this event (Google Meet, or Teams on a Microsoft account). " +
             "Defaults to TRUE — anything with other people on it needs a way to join. Pass false for a solo " +
-            "hold, focus time, or a reminder to yourself, where a meeting room would be noise.",
+            "hold, focus time, or a reminder to yourself, where a meeting room would be noise. Ignored when " +
+            "attendees are given: an invite uses the owner's fixed room (or videoLink) instead of a minted link.",
         },
         description: { type: "string" },
         location: { type: "string" },
@@ -459,6 +559,12 @@ export function createEventTool() {
       if (timezone && !isValidTimezone(timezone)) {
         return JSON.stringify({ error: "invalid_timezone", message: `Unknown timezone: ${timezone}` });
       }
+      // Guests: validated up front so a bad address never reaches the provider.
+      const attendees = parseAttendees(input.attendees);
+      if ("error" in attendees) return JSON.stringify(attendees);
+      const invite = attendees.list.length > 0 ? buildInvite(input, attendees.list, start, end) : null;
+      if (invite && "error" in invite) return JSON.stringify(invite);
+
       const account = await resolveTargetAccount(input.accountEmail);
       if ("error" in account) return JSON.stringify(account);
       try {
@@ -466,22 +572,33 @@ export function createEventTool() {
           title: (input.title as string).trim(),
           start,
           end,
-          description: (input.description as string | undefined)?.trim() || undefined,
-          location: (input.location as string | undefined)?.trim() || undefined,
+          description: invite ? invite.description : (input.description as string | undefined)?.trim() || undefined,
+          descriptionHtml: invite ? invite.descriptionHtml : undefined,
+          location: invite ? invite.location : (input.location as string | undefined)?.trim() || undefined,
           recurrenceRule,
           timezone,
-          conference: input.addVideoLink !== false,
+          // An invite uses the owner's fixed room (or a pasted link), never a
+          // provider-minted conference: two links on one invite is confusing.
+          conference: invite ? false : input.addVideoLink !== false,
+          ...(invite
+            ? {
+                attendeeEmail: attendees.list[0].email,
+                attendeeName: attendees.list[0].name,
+                additionalAttendeeEmails: attendees.list.slice(1).map((a) => a.email),
+              }
+            : {}),
         });
         return JSON.stringify({
           ok: true,
           eventId: created.id,
           // Null when the provider declined or the account cannot host one —
           // say so rather than implying a link exists.
-          videoLink: created.videoLink ?? null,
+          videoLink: invite ? (invite.videoLink ?? null) : (created.videoLink ?? null),
           account: account.email,
           recurring: !!recurrenceRule,
           start: start.toISOString(),
           end: end.toISOString(),
+          ...(invite ? { invited: attendees.list.map((a) => a.email), meeting: invite.meeting } : {}),
         });
       } catch (err) {
         return JSON.stringify({ error: "event_failed", message: err instanceof Error ? err.message : "Unknown error" });
