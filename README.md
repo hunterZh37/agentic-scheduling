@@ -72,6 +72,12 @@ cannot be double-booked. The same flow works on a phone:
 
 <img src="docs/media/mobile.gif" width="320" alt="The booking flow on a phone: scrolling the page and opening the times dialog">
 
+### Send a link to one day
+
+While a day's times panel is open, the address bar reads `/book?date=YYYY-MM-DD`
+(plus `&duration=` when a non-default length is picked). Copy and send it: the
+link opens the booking page with that day's panel already open.
+
 ### WhatsApp and email reminders
 
 ![A rendered reminder email next to the WhatsApp booking alert and reminder messages](docs/media/reminders.png)

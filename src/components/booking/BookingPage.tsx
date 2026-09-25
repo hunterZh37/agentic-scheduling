@@ -6,6 +6,7 @@ import { HOST, OWNER_FIRST_NAME, COMMON_TIMEZONES, formatDuration } from "@/lib/
 import { PublicAgentChat } from "./PublicAgentChat";
 import { useSheetDrag } from "@/lib/motion/useSheetDrag";
 import { AnimatedHeight } from "@/lib/motion/AnimatedHeight";
+import { parseDayParam, dayLinkSearch } from "@/lib/booking/dayLink";
 import styles from "./BookingPage.module.css";
 
 type Mode = "pick" | "agent";
@@ -27,8 +28,15 @@ export function BookingPage({
   preview = false,
   reschedule,
   team,
+  initialDay,
+  initialDuration,
 }: {
   preview?: boolean;
+  /// From the URL: `?date=YYYY-MM-DD` opens that day's times panel on load,
+  /// and `?duration=` picks the length. The address bar mirrors the open
+  /// panel, so the owner can send "the link to this specific day".
+  initialDay?: string;
+  initialDuration?: string;
   /// When set, the page reschedules this existing booking instead of creating a
   /// new one: the visitor just picks a new time (no name/email needed).
   reschedule?: { id: string; token: string };
@@ -143,8 +151,48 @@ export function BookingPage({
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TZ;
     setBookerTz(tz);
     setViewMonth(DateTime.now().setZone(tz).startOf("month"));
+    // A link to one day: open its panel as if the visitor had tapped it. A
+    // past or malformed day just shows the page normally.
+    const linked = reschedule ? null : parseDayParam(initialDay, tz);
+    if (linked) {
+      const n = Number(initialDuration);
+      if (initialDuration && Number.isFinite(n) && n >= 15 && n <= 480) {
+        const v = Math.round(n);
+        setDuration(v);
+        // A length that is not one of the pills shows as the Custom pill, the
+        // way it would if the visitor had typed it.
+        if (!durationOptions.includes(v)) {
+          setCustomOn(true);
+          setCustomStr(String(v));
+        }
+      }
+      setViewMonth(linked.startOf("month") as DateTime<true>);
+      setSelectedDate(linked);
+      setDialogStep("times");
+      setSlotDialogOpen(true);
+    }
     setMounted(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Mirror the open panel into the address bar (replace, not push: closing
+  // the panel must not need a Back press). Nothing else on the URL is touched.
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined" || reschedule) return;
+    const open = slotDialogOpen && selectedDate ? { day: selectedDate.toISODate()!, duration, defaultDuration } : null;
+    const search = dayLinkSearch(new URLSearchParams(window.location.search), open);
+    const next = `${window.location.pathname}${search}${window.location.hash}`;
+    if (next === `${window.location.pathname}${window.location.search}${window.location.hash}`) return;
+    // `null` state, as Next's router documents for its patched replaceState:
+    // reusing the existing state object makes the router skip its own URL
+    // sync. And the mirror is cosmetic: Safari rate-limits history writes
+    // and throws past the limit, which must never take the page down.
+    try {
+      window.history.replaceState(null, "", next);
+    } catch {
+      /* address bar stays stale; the panel itself is unaffected */
+    }
+  }, [mounted, slotDialogOpen, selectedDate, duration, defaultDuration, reschedule]);
 
   // Load slots for the selected day.
   useEffect(() => {

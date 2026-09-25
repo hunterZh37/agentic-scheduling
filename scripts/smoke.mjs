@@ -153,6 +153,17 @@ await check("public pages load without a session", async () => {
   return { ok: bad.length === 0, detail: bad.length ? bad.join(", ") : "all 200" };
 });
 
+// A link to one day (/book?date=YYYY-MM-DD) is what the owner sends out to say
+// "here is the day you asked about". It must be served like /book itself: the
+// proxy must not strip or gate the query, and the server HTML must still carry
+// the page identity. The panel itself opens client-side (covered by unit tests).
+await check("day link to the booking page is served", async () => {
+  const r = await get(`/book?date=${isoDay(3)}&duration=45`);
+  const html = r.status === 200 ? await r.text() : "";
+  const ok = r.status === 200 && /Book time with/.test(html);
+  return { ok, detail: `status=${r.status}${ok ? ", page identity present" : ""}` };
+});
+
 // --- Sign-in ----------------------------------------------------------------
 // The button must be in the HTML as sent: /login is a server component now,
 // precisely so a visitor (or a reputation crawler) sees a real page without

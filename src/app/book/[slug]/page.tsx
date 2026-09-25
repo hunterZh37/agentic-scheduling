@@ -34,10 +34,13 @@ export async function generateMetadata({
 
 export default async function TeamBook({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ date?: string; duration?: string }>;
 }) {
   const { slug } = await params;
+  const { date, duration } = await searchParams;
   const team = await teamForSlug(slug);
   if (!team) notFound();
 
@@ -85,6 +88,8 @@ export default async function TeamBook({
         </p>
       </noscript>
       <BookingPage
+        initialDay={date}
+        initialDuration={duration}
         team={{
           slug: team.slug,
           name: team.name,

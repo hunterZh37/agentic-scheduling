@@ -15,9 +15,9 @@ export const metadata = {
 export default async function Book({
   searchParams,
 }: {
-  searchParams: Promise<{ preview?: string; reschedule?: string; t?: string }>;
+  searchParams: Promise<{ preview?: string; reschedule?: string; t?: string; date?: string; duration?: string }>;
 }) {
-  const { preview, reschedule, t } = await searchParams;
+  const { preview, reschedule, t, date, duration } = await searchParams;
   // Shown in the no-JS fallback so a visitor can still reach the owner. Comes
   // from env so the repo carries no personal address.
   const contactEmail = optionalEnv("OWNER_EMAIL") ?? optionalEnv("HUNTER_EMAIL");
@@ -65,6 +65,9 @@ export default async function Book({
       <BookingPage
         preview={preview === "1"}
         reschedule={reschedule && t ? { id: reschedule, token: t } : undefined}
+        // A link to one day (?date=YYYY-MM-DD) opens that day's times panel.
+        initialDay={date}
+        initialDuration={duration}
       />
     </>
   );
