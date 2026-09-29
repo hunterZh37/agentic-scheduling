@@ -18,6 +18,7 @@ export function untimedTodoDetailItem(
     videoLink?: string | null;
     phone?: string | null;
     items?: { id: string; title: string; done: boolean }[];
+    notes?: string | null;
   },
   day: DateTime
 ): CalendarItem {
@@ -30,6 +31,7 @@ export function untimedTodoDetailItem(
     end: anchor,
     untimed: true,
     items: t.items,
+    notes: t.notes ?? undefined,
     location: t.location ?? undefined,
     videoLink: t.videoLink ?? undefined,
     phone: t.phone ?? undefined,
@@ -99,6 +101,8 @@ export type AgendaItem = {
   recurring?: boolean;
   /// Todo-only: the to-do list. Drives the "1 of 3" pill and the panel's list.
   items?: { id: string; title: string; done: boolean }[];
+  /// Todo-only: free-text notes.
+  notes?: string | null;
   // Block-only: the underlying PersonalBlock id, so a block row can persist its
   // crossed-off ("done") state via PATCH instead of the local `checked` set.
   blockId?: string;
@@ -164,6 +168,7 @@ export function agendaDetailItem(item: AgendaItem): CalendarItem | undefined {
         videoLink: item.videoLink,
         phone: item.phone,
         items: item.items,
+        notes: item.notes ?? undefined,
       };
     case "birthday":
       return undefined;

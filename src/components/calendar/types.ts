@@ -23,6 +23,9 @@ export interface CalendarItem {
   untimed?: boolean;
   /// Actionables only: the to-do list, in order. Progress is derived from it.
   items?: { id: string; title: string; done: boolean }[];
+  /// Actionables only: free-text notes (a back-link, an agenda), plain text
+  /// with links rendered clickable. Events use `description` (provider HTML).
+  notes?: string;
   /// Present for real calendar events — drives the account color.
   accountEmail?: string;
   // Detail (present mainly on real events; used by the event detail modal).

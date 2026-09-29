@@ -152,6 +152,10 @@ model Todo {
   location  String?   // In-person location, e.g. "123 Main St".
   videoLink String?   // Online meeting URL, e.g. a Zoom/Meet link.
   phone     String?   // Phone number for a call.
+  // Free-text context: a back-link to the email thread it came from, an
+  // agenda, a reminder of why. Rendered with links clickable. Not a task:
+  // tasks are TodoItems (owner, 2026-09-24).
+  notes     String?
   sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   // Carry-forward: when an actionable is left unfinished, the next day's copy

@@ -664,12 +664,14 @@
   }
   /* Edit-form controls: clear the 44px touch floor on phones, and keep the
      Repeat <select> at 16px so iOS doesn't zoom on focus (globals' element-level
-     anti-zoom rule is out-specified by the `.fInput` class). Text inputs are
-     already 16px via globals; native date/time pickers keep their own size. */
+     anti-zoom rule is out-specified by the `.fInput` class); same for the
+     Notes textarea, which actionables now use too. Text inputs are already
+     16px via globals; native date/time pickers keep their own size. */
   .fInput {
     min-height: 44px;
   }
-  select.fInput {
+  select.fInput,
+  textarea.fInput {
     font-size: 16px;
   }
   .btnPrimary,

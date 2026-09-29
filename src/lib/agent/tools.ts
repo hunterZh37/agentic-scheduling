@@ -9,7 +9,7 @@ import { getScheduleView } from "@/lib/schedule/service";
 import { createBooking, cancelBooking, BookingError, rescheduleBooking } from "@/lib/booking/service";
 import { createDestinationEvent, updateDestinationEvent, deleteDestinationEvent } from "@/lib/calendar/write";
 import { isValidTimezone } from "@/lib/validation";
-import { diffItems, progress, withItems } from "@/lib/todos/items";
+import { diffItems, progress, withItems, NOTES_MAX } from "@/lib/todos/items";
 import { createNudge, listUpcomingNudges, cancelNudge } from "@/lib/nudge/service";
 import { nextOccurrence, createRecurringActionable } from "@/lib/todos/recurring";
 import { runFindMutualTimes, type FindMutualTimesArgs } from "./mutualSlots";
@@ -654,6 +654,12 @@ export function createActionableTool() {
         endISO: { type: "string", description: "Optional timed end (ISO 8601 UTC). If set, startISO is required." },
         location: { type: "string", description: "In-person location." },
         videoLink: { type: "string", description: "Online meeting URL." },
+        notes: {
+          type: "string",
+          description:
+            "Free-text context for the actionable: a link back to the email or thread it came from, an agenda, " +
+            "why it matters. Links render clickable. NOT a task: tasks go in items.",
+        },
         items: {
           type: "array",
           items: { type: "string" },
@@ -751,6 +757,7 @@ export function createActionableTool() {
           endTime: end,
           location: location ?? null,
           videoLink: videoLink ?? null,
+          notes: (input.notes as string | undefined)?.trim().slice(0, NOTES_MAX) || null,
           sortOrder: (last?.sortOrder ?? -1) + 1,
           items: { create: items },
         },
@@ -805,6 +812,7 @@ export function listActionablesTool() {
           location: t.location,
           videoLink: t.videoLink,
           phone: t.phone,
+          notes: t.notes,
           items: t.items.map((i) => ({ id: i.id, title: i.title, done: i.done })),
           progress: progress(t.items),
         })),
@@ -836,6 +844,7 @@ export function updateActionableTool() {
         location: { type: "string" },
         videoLink: { type: "string" },
         phone: { type: "string" },
+        notes: { type: "string", description: "Free-text context (a back-link, an agenda). Empty string clears." },
         done: { type: "boolean" },
       },
       required: ["id"],
@@ -854,6 +863,7 @@ export function updateActionableTool() {
       if (input.location !== undefined) data.location = (input.location as string)?.trim() || null;
       if (input.videoLink !== undefined) data.videoLink = (input.videoLink as string)?.trim() || null;
       if (input.phone !== undefined) data.phone = (input.phone as string)?.trim() || null;
+      if (input.notes !== undefined) data.notes = (input.notes as string)?.trim().slice(0, NOTES_MAX) || null;
       if (input.done !== undefined) data.done = !!input.done;
 
       if (input.dayISO !== undefined) {

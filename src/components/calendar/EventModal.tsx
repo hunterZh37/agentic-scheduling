@@ -14,6 +14,7 @@ import { useSheetDrag } from "@/lib/motion/useSheetDrag";
 import { haptic } from "@/lib/motion/haptics";
 import ReminderControl from "@/components/reminders/ReminderControl";
 import { TodoItems, TodoItemsEditor } from "./TodoItems";
+import { renderMarkdown } from "@/components/agent/markdown";
 import type { CalendarItem } from "./types";
 import styles from "./EventModal.module.css";
 
@@ -123,7 +124,10 @@ export function EventModal({
   // slot, drops the old — so the provider sends the attendee an updated invite.
   const isBooking = item.kind === "booking";
   const canEdit = (item.kind === "event" && !!item.accountEmail) || isActionable || isBooking;
-  const seedNotes = item.description ? htmlToPlain(item.description) : "";
+  // Events keep provider HTML in `description`; an actionable's notes are the
+  // owner's own plain text (links rendered clickable), so both share the one
+  // Notes control but read and write different fields.
+  const seedNotes = item.kind === "actionable" ? (item.notes ?? "") : item.description ? htmlToPlain(item.description) : "";
 
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [fTitle, setFTitle] = useState(item.title);
@@ -210,6 +214,7 @@ export function EventModal({
             location: fLoc,
             videoLink: fUrl,
             phone: fPhone,
+            notes: fNotes,
             // Only send the replacement list when the editor changed it, so a
             // title-only save never touches the items.
             ...(itemsEdited() ? { items: fItems } : {}),
@@ -513,18 +518,18 @@ export function EventModal({
               </>
             )}
 
-            {/* Notes maps to the provider event's description. A Todo has no
-                such field, so it is hidden for actionables rather than shown
-                as a control whose input would be silently dropped. A booking's
-                description is the attendee's, not the owner's, so hide it too. */}
-            {!isActionable && !isBooking && (
+            {/* Notes: the provider event's description, or an actionable's
+                own notes (context such as a back-link, distinct from its to-do
+                items). A booking's description is the attendee's, not the
+                owner's, so hide it there. */}
+            {!isBooking && (
               <>
             <label className={styles.fLabel}>Notes</label>
             <textarea
               className={`${styles.fInput} ${styles.fTextarea}`}
               value={fNotes}
               onChange={(e) => setFNotes(e.target.value)}
-              placeholder="Add notes"
+              placeholder={isActionable ? "Context, links, an agenda" : "Add notes"}
               rows={3}
             />
               </>
@@ -671,6 +676,13 @@ export function EventModal({
             <div className={styles.row}>
               <RowIcon name="notes" />
               <div className={styles.desc} dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+            </div>
+          )}
+
+          {isActionable && item.notes?.trim() && (
+            <div className={styles.row}>
+              <RowIcon name="notes" />
+              <div className={styles.desc}>{renderMarkdown(item.notes)}</div>
             </div>
           )}
         </div>

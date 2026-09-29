@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { parseIsoDate } from "@/lib/validation";
-import { diffItems, parseIncomingItems, withItems, withProgress } from "@/lib/todos/items";
+import { diffItems, parseIncomingItems, withItems, withProgress, NOTES_MAX } from "@/lib/todos/items";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,8 @@ interface TodoBody {
   location?: string | null;
   videoLink?: string | null;
   phone?: string | null;
+  // Free-text context. Omitted = untouched; empty or null = clear.
+  notes?: string | null;
 }
 
 export async function PATCH(
@@ -55,6 +57,7 @@ export async function PATCH(
     location?: string | null;
     videoLink?: string | null;
     phone?: string | null;
+    notes?: string | null;
   } = {};
   if (body.title !== undefined) data.title = body.title.trim();
   if (body.date !== undefined) {
@@ -71,6 +74,12 @@ export async function PATCH(
   if (body.location !== undefined) data.location = body.location?.trim() || null;
   if (body.videoLink !== undefined) data.videoLink = body.videoLink?.trim() || null;
   if (body.phone !== undefined) data.phone = body.phone?.trim() || null;
+  if (body.notes !== undefined) {
+    if (body.notes !== null && (typeof body.notes !== "string" || body.notes.length > NOTES_MAX)) {
+      return NextResponse.json({ error: "invalid_input", message: `notes must be a string of at most ${NOTES_MAX} characters.` }, { status: 400 });
+    }
+    data.notes = body.notes?.trim() || null;
+  }
 
   // Time range is updated as a pair: provide both to set a range, both null
   // to clear it, or omit both to leave the existing range untouched.

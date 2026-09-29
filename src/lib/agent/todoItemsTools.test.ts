@@ -63,6 +63,17 @@ describe("set_todo_item_done and remove_todo_item", () => {
   });
 });
 
+describe("create_actionable with notes", () => {
+  it("stores trimmed notes on the actionable, not as an item", async () => {
+    todo.findFirst.mockResolvedValue(null);
+    todo.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: "new", items: [], ...data }));
+    await run(createActionableTool(), { title: "Reply to Keith", dayISO: "2026-09-09T12:00:00Z", notes: "  Open in Celeste: https://example.com/go/thread/abc  " });
+    const data = todo.create.mock.calls[0][0].data;
+    expect(data.notes).toBe("Open in Celeste: https://example.com/go/thread/abc");
+    expect(data.items).toEqual({ create: [] });
+  });
+});
+
 describe("create_actionable with items", () => {
   it("creates the actionable and its list in one write", async () => {
     todo.findFirst.mockResolvedValue(null);

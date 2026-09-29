@@ -79,6 +79,11 @@ describe("carriedTodoData", () => {
     });
   });
 
+  it("carries the notes (a back-link is context the copy still needs)", () => {
+    const c = carriedTodoData({ ...base, notes: "Open in Celeste: https://example.com/go/thread/abc" }, day(2026, 6, 11), 0);
+    expect(c.notes).toBe("Open in Celeste: https://example.com/go/thread/abc");
+  });
+
   it("creates no items for a source without a list", () => {
     const c = carriedTodoData(base, day(2026, 6, 11), 0);
     expect(c.items).toBeUndefined();

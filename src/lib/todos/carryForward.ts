@@ -12,6 +12,7 @@ export interface CarrySource {
   location: string | null;
   videoLink: string | null;
   phone: string | null;
+  notes?: string | null;
   /// The source's to-do list, copied whole (done states included).
   items?: { title: string; done: boolean; sortOrder: number }[];
 }
@@ -46,6 +47,7 @@ export function carriedTodoData(source: CarrySource, targetDay: DateTime, sortOr
     location: source.location,
     videoLink: source.videoLink,
     phone: source.phone,
+    notes: source.notes ?? null,
     sortOrder,
     rolledFromId: source.id,
     ...(source.items && source.items.length > 0

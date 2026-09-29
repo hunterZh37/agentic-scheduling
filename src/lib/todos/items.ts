@@ -22,6 +22,8 @@ export interface ItemDiff {
 }
 
 export const ITEM_TITLE_MAX = 200;
+/// Free-text notes on an actionable: enough for a back-link and a paragraph.
+export const NOTES_MAX = 2000;
 
 /// Reconcile the stored list with a full replacement list from the editor.
 /// Position in `incoming` is the new sortOrder. An incoming id the todo does

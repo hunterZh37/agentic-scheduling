@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseIsoDate } from "@/lib/validation";
-import { diffItems, parseIncomingItems, withItems, withProgress } from "@/lib/todos/items";
+import { diffItems, parseIncomingItems, withItems, withProgress, NOTES_MAX } from "@/lib/todos/items";
 
 export const runtime = "nodejs";
 
@@ -38,6 +38,9 @@ interface TodoBody {
   location?: string;
   videoLink?: string;
   phone?: string;
+  /// Free-text context (a back-link, an agenda). Not a task. null = none,
+  /// same as PATCH.
+  notes?: string | null;
   /// Optional to-do list: titles (or {title, done}) in order.
   items?: unknown;
 }
@@ -77,6 +80,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  if (body.notes !== undefined && body.notes !== null && (typeof body.notes !== "string" || body.notes.length > NOTES_MAX)) {
+    return NextResponse.json({ error: "invalid_input", message: `notes must be a string of at most ${NOTES_MAX} characters.` }, { status: 400 });
+  }
   const parsedItems = body.items === undefined ? { items: [] } : parseIncomingItems(body.items);
   if ("error" in parsedItems) {
     return NextResponse.json({ error: "invalid_input", message: parsedItems.error }, { status: 400 });
@@ -97,6 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       location: body.location?.trim() || null,
       videoLink: body.videoLink?.trim() || null,
       phone: body.phone?.trim() || null,
+      notes: body.notes?.trim() || null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
       items: { create: items },
     },

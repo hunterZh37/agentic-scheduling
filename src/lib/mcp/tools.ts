@@ -1,6 +1,6 @@
 import { CreatedVia } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { diffItems } from "@/lib/todos/items";
+import { diffItems, NOTES_MAX } from "@/lib/todos/items";
 import { getAvailability } from "@/lib/availability/service";
 import { computeMutualSlots } from "@/lib/agent/mutualSlots";
 import { createBooking, BookingError } from "@/lib/booking/service";
@@ -338,6 +338,10 @@ const createActionableTool: McpTool = {
         items: { type: "string" },
         description: "Optional to-do list under the actionable, in order (one actionable with items, not one per line).",
       },
+      notes: {
+        type: "string",
+        description: "Free-text context, e.g. a link back to the thread this came from. Rendered with links clickable. Not a task.",
+      },
     },
     required: ["title", "dayISO"],
   },
@@ -359,7 +363,15 @@ const createActionableTool: McpTool = {
     const itemTitles = Array.isArray(a.items) ? (a.items as unknown[]).filter((t): t is string => typeof t === "string") : [];
     const { create: items } = diffItems([], itemTitles.map((t) => ({ title: t })));
     const todo = await prisma.todo.create({
-      data: { title, date: dayKey, startTime, endTime, sortOrder: (last?.sortOrder ?? -1) + 1, items: { create: items } },
+      data: {
+        title,
+        date: dayKey,
+        startTime,
+        endTime,
+        notes: (typeof a.notes === "string" ? a.notes.trim().slice(0, NOTES_MAX) : "") || null,
+        sortOrder: (last?.sortOrder ?? -1) + 1,
+        items: { create: items },
+      },
     });
     return { ok: true, todoId: todo.id, timed: !!(startTime && endTime), items: items.length };
   },

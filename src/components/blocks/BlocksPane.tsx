@@ -43,6 +43,8 @@ export interface TodoRow {
   recurringTodoId?: string | null;
   /// The actionable's to-do list, in order. Progress ("1 of 3") is derived.
   items?: { id: string; title: string; done: boolean; sortOrder: number }[];
+  /// Free-text notes (a back-link, an agenda).
+  notes?: string | null;
 }
 /// A recurring actionable SCHEDULE (a RecurringTodo template), shown in its own
 /// section so a series is visible the moment it's set up — not only on the first
@@ -754,6 +756,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
         carriedOver: !!t.rolledFromId,
         recurring: !!t.recurringTodoId,
         items: t.items,
+        notes: t.notes,
         location: t.location ?? undefined,
         videoLink: t.videoLink ?? undefined,
         phone: t.phone ?? undefined,
