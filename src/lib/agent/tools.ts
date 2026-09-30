@@ -975,8 +975,9 @@ export function createRecurringActionableTool() {
         startISO: { type: "string", description: "Optional: a timed start (ISO 8601). Its owner-local time-of-day repeats. Requires endISO." },
         endISO: { type: "string", description: "Optional: a timed end (ISO 8601), same day as startISO, after it. Requires startISO." },
         location: { type: "string", description: "In-person location." },
-        videoLink: { type: "string", description: "Online meeting URL." },
+        videoLink: { type: "string", description: "Online meeting URL, or the web page the task happens on (e.g. the rent portal)." },
         phone: { type: "string", description: "Phone number for a call." },
+        notes: { type: "string", description: "Free-text context every occurrence inherits (a link, why, how). Not a task." },
       },
       required: ["title", "rrule"],
     },
@@ -1007,6 +1008,7 @@ export function createRecurringActionableTool() {
         endMinutes,
         location: (input.location as string | undefined) ?? null,
         videoLink: (input.videoLink as string | undefined) ?? null,
+        notes: (input.notes as string | undefined)?.slice(0, NOTES_MAX) ?? null,
         phone: (input.phone as string | undefined) ?? null,
       });
       if (!result.ok) return JSON.stringify({ error: result.error, message: result.message });
@@ -1044,6 +1046,8 @@ export function listRecurringActionablesTool() {
           return {
             id: t.id,
             title: t.title,
+            videoLink: t.videoLink,
+            notes: t.notes,
             rrule: t.rrule,
             timed: t.startMinutes != null,
             nextOccurrence: next ? next.toISODate() : null,

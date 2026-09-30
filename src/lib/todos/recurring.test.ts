@@ -20,6 +20,7 @@ import {
   createRecurringActionable,
   updateRecurringActionable,
   resyncFutureOccurrences,
+  inheritedFields,
 } from "./recurring";
 import { dayKey } from "./carryForward";
 
@@ -312,5 +313,18 @@ describe("materializeRecurringTodos", () => {
     const res = await materializeRecurringTodos(day(2026, 8, 31).set({ hour: 7 }));
     expect(res).toEqual({ templates: 1, created: 1 });
     expect(prisma.recurringTodo.findMany).toHaveBeenCalledWith({ where: { active: true } });
+  });
+});
+
+// The rent portal link lives on the template and must reach every seeded
+// occurrence, on creation and on resync alike (owner, 2026-09-30).
+describe("inheritedFields", () => {
+  it("copies title, where fields and notes, normalising absent ones to null", () => {
+    expect(
+      inheritedFields({ title: "Pay rent", location: null, videoLink: "https://portal.example.com/pay", phone: null, notes: "Due on the 1st" })
+    ).toEqual({ title: "Pay rent", location: null, videoLink: "https://portal.example.com/pay", phone: null, notes: "Due on the 1st" });
+    expect(inheritedFields({ title: "x", location: null, videoLink: null, phone: null })).toEqual({
+      title: "x", location: null, videoLink: null, phone: null, notes: null,
+    });
   });
 });

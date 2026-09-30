@@ -52,6 +52,16 @@ export function RecurringModal({
   const [preset, setPreset] = useState<RecurrencePreset>(initialPreset);
   const [start, setStart] = useState(minutesToHM(row.startMinutes));
   const [end, setEnd] = useState(minutesToHM(row.endMinutes));
+  // The page the task happens on (the rent portal) and free-text context.
+  // Every seeded occurrence inherits both (owner, 2026-09-30).
+  const [link, setLink] = useState(row.videoLink ?? "");
+  const [notes, setNotes] = useState(row.notes ?? "");
+  // A bare domain gets https://; http(s), mailto and tel pass through; any
+  // other scheme is refused at save rather than silently rewritten.
+  const linkTrim = link.trim();
+  const linkScheme = /^[a-z][a-z0-9+.-]*:/i.exec(linkTrim)?.[0].toLowerCase() ?? null;
+  const linkHref = !linkTrim ? "" : linkScheme ? linkTrim : `https://${linkTrim}`;
+  const linkOk = !linkScheme || ["http:", "https:", "mailto:", "tel:"].includes(linkScheme);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +86,10 @@ export function RecurringModal({
     const t = title.trim();
     if (!t) {
       setError("A title is required.");
+      return;
+    }
+    if (!linkOk) {
+      setError("The link must be a web address (https://), an email (mailto:) or a phone (tel:).");
       return;
     }
     // Time is optional; if given, both ends are required and end must be after
@@ -108,7 +122,14 @@ export function RecurringModal({
       const res = await fetch(`/api/recurring/${row.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: t, rrule: presetToRule(preset), startTime, endTime }),
+        body: JSON.stringify({
+          title: t,
+          rrule: presetToRule(preset),
+          startTime,
+          endTime,
+          videoLink: linkHref || null,
+          notes: notes.trim() || null,
+        }),
       });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
@@ -161,6 +182,32 @@ export function RecurringModal({
           Leave the times empty for an all-day checklist item. Setting a time places each occurrence on your calendar at
           that time.
         </p>
+
+        <label className={styles.fLabel}>Link</label>
+        <div className={styles.linkRow}>
+          <input
+            className={styles.fInput}
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="Where this happens, e.g. the rent portal"
+          />
+          {linkHref && linkOk && (
+            <a className={styles.btnGhost} href={linkHref} target="_blank" rel="noopener noreferrer">
+              Open
+            </a>
+          )}
+        </div>
+
+        <label className={styles.fLabel}>Notes</label>
+        <textarea
+          className={`${styles.fInput} ${styles.fTextarea}`}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Context every occurrence carries"
+          rows={3}
+        />
+        <p className={styles.hint}>Every occurrence of this schedule carries the link and notes.</p>
 
         <div className={styles.nextTrigger}>
           <span className={styles.fLabel}>Next trigger</span>

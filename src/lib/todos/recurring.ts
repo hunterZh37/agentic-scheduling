@@ -119,8 +119,22 @@ interface RecurringTemplate {
   location: string | null;
   videoLink: string | null;
   phone: string | null;
+  notes?: string | null;
   lastMaterializedOn: Date | null;
   createdAt: Date;
+}
+
+/// The fields a seeded occurrence inherits from its template, on creation and
+/// again on every template edit (resync). One list, so the two never drift:
+/// a link set on "Pay rent" must reach every future "Pay rent".
+export function inheritedFields(t: Pick<RecurringTemplate, "title" | "location" | "videoLink" | "phone" | "notes">) {
+  return {
+    title: t.title,
+    location: t.location ?? null,
+    videoLink: t.videoLink ?? null,
+    phone: t.phone ?? null,
+    notes: t.notes ?? null,
+  };
 }
 
 /// The start/end instants for a timed occurrence on `day`, built in the owner's
@@ -159,13 +173,10 @@ async function seedTemplate(
     try {
       await prisma.todo.create({
         data: {
-          title: t.title,
+          ...inheritedFields(t),
           date,
           startTime: start,
           endTime: end,
-          location: t.location,
-          videoLink: t.videoLink,
-          phone: t.phone,
           sortOrder: (last?.sortOrder ?? -1) + 1,
           recurringTodoId: t.id,
         },
@@ -235,6 +246,7 @@ export interface NewRecurringActionable {
   location?: string | null;
   videoLink?: string | null;
   phone?: string | null;
+  notes?: string | null;
 }
 
 /// Create a recurring actionable and seed its current + next occurrence, so it's
@@ -274,6 +286,7 @@ export async function createRecurringActionable(
       location: input.location?.trim() || null,
       videoLink: input.videoLink?.trim() || null,
       phone: input.phone?.trim() || null,
+      notes: input.notes?.trim() || null,
     },
   });
 
@@ -309,7 +322,7 @@ export async function resyncFutureOccurrences(
     const end = t.endMinutes != null ? day.plus({ minutes: t.endMinutes }).toUTC().toJSDate() : null;
     await prisma.todo.update({
       where: { id: todo.id },
-      data: { title: t.title, startTime: start, endTime: end, location: t.location, videoLink: t.videoLink, phone: t.phone },
+      data: { ...inheritedFields(t), startTime: start, endTime: end },
     });
     updated++;
   }
@@ -329,6 +342,7 @@ export async function updateRecurringActionable(
     location: string | null;
     videoLink: string | null;
     phone: string | null;
+    notes: string | null;
   }>,
   now: DateTime = DateTime.now()
 ): Promise<
@@ -366,6 +380,7 @@ export async function updateRecurringActionable(
   if (patch.location !== undefined) data.location = patch.location?.trim() || null;
   if (patch.videoLink !== undefined) data.videoLink = patch.videoLink?.trim() || null;
   if (patch.phone !== undefined) data.phone = patch.phone?.trim() || null;
+  if (patch.notes !== undefined) data.notes = patch.notes?.trim() || null;
 
   const updated = await prisma.recurringTodo.update({ where: { id }, data });
   const resynced = await resyncFutureOccurrences(id, now);

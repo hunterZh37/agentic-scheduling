@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { NOTES_MAX } from "@/lib/todos/items";
 import { DateTime } from "luxon";
 import { prisma } from "@/lib/db";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
@@ -48,6 +49,7 @@ export async function GET(): Promise<NextResponse> {
       endMinutes: t.endMinutes,
       location: t.location,
       videoLink: t.videoLink,
+      notes: t.notes,
       phone: t.phone,
     };
   });
@@ -63,6 +65,7 @@ interface RecurringBody {
   endTime?: string;
   location?: string;
   videoLink?: string;
+  notes?: string;
   phone?: string;
 }
 
@@ -82,6 +85,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const timed = body.startTime !== undefined && body.endTime !== undefined;
+  if (body.notes !== undefined && (typeof body.notes !== "string" || body.notes.length > NOTES_MAX)) {
+    return NextResponse.json({ error: "invalid_input", message: `notes must be a string of at most ${NOTES_MAX} characters.` }, { status: 400 });
+  }
   const result = await createRecurringActionable({
     title: body.title ?? "",
     rrule: body.rrule ?? "",
@@ -89,6 +95,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     endMinutes: timed ? minutesOfDay(body.endTime) : null,
     location: body.location ?? null,
     videoLink: body.videoLink ?? null,
+    notes: body.notes ?? null,
     phone: body.phone ?? null,
   });
   if (!result.ok) {

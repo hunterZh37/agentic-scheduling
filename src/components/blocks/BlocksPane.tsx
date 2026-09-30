@@ -62,6 +62,7 @@ export interface RecurringRow {
   location: string | null;
   videoLink: string | null;
   phone: string | null;
+  notes?: string | null;
 }
 export interface BlockRow {
   id: string;

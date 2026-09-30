@@ -215,6 +215,9 @@ model RecurringTodo {
   location     String?
   videoLink    String?
   phone        String?
+  // Free-text context every seeded occurrence inherits: the link to the rent
+  // portal, an agenda, why. Not a task (owner, 2026-09-30).
+  notes        String?
   // Cancelling a series flips this to false: it stops seeding new days but
   // keeps the row (and the link on already-seeded todos) so it can be resumed.
   active Boolean @default(true)

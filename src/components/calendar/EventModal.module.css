@@ -418,6 +418,22 @@
   padding: 0 var(--space-2);
 }
 
+/* Link field with an Open button beside it (recurring schedule panel). */
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.linkRow .fInput {
+  flex: 1;
+  min-width: 0;
+}
+.linkRow a.btnGhost {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .titleProgress {
   flex: none;
   margin-left: var(--space-2);

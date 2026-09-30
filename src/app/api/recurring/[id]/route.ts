@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { NOTES_MAX } from "@/lib/todos/items";
 import { DateTime } from "luxon";
 import { prisma } from "@/lib/db";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
@@ -15,6 +16,7 @@ interface PatchBody {
   endTime?: string | null;
   location?: string | null;
   videoLink?: string | null;
+  notes?: string | null;
   phone?: string | null;
 }
 
@@ -48,7 +50,18 @@ export async function PATCH(
     patch.endMinutes = minutesOfDay(body.endTime);
   }
   if (body.location !== undefined) patch.location = body.location;
-  if (body.videoLink !== undefined) patch.videoLink = body.videoLink;
+  if (body.videoLink !== undefined) {
+    if (body.videoLink !== null && typeof body.videoLink !== "string") {
+      return NextResponse.json({ error: "invalid_input", message: "videoLink must be a string or null." }, { status: 400 });
+    }
+    patch.videoLink = body.videoLink;
+  }
+  if (body.notes !== undefined) {
+    if (body.notes !== null && (typeof body.notes !== "string" || body.notes.length > NOTES_MAX)) {
+      return NextResponse.json({ error: "invalid_input", message: `notes must be a string of at most ${NOTES_MAX} characters.` }, { status: 400 });
+    }
+    patch.notes = body.notes;
+  }
   if (body.phone !== undefined) patch.phone = body.phone;
 
   const result = await updateRecurringActionable(id, patch);
