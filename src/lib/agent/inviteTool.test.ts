@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const created = vi.fn();
 vi.mock("@/lib/calendar/write", () => ({ createDestinationEvent: (...a: unknown[]) => created(...a) }));
+vi.mock("@/lib/calendar/read", () => ({ listEvents: vi.fn(async () => []) }));
 vi.mock("@/lib/db", () => ({ prisma: { account: { findFirst: vi.fn(async () => ({ id: "a1", email: "owner@example.com", refreshToken: "r", accessToken: "a", isDestination: true })), findUnique: vi.fn() } } }));
 vi.mock("@/lib/clientConfig", () => ({ OWNER_TIMEZONE: "America/Los_Angeles" }));
 vi.mock("@/lib/booking/publicConfig", async (orig) => {
@@ -17,6 +18,7 @@ vi.mock("@/lib/booking/publicConfig", async (orig) => {
 });
 
 import { createEventTool } from "./tools";
+import { recentWrites } from "./recentWrites";
 
 const run = async (input: unknown) =>
   JSON.parse(await (createEventTool() as unknown as { run: (i: unknown) => Promise<string> }).run(input));
@@ -24,6 +26,9 @@ const base = { title: "Product review", startISO: "2026-10-02T17:00:00.000Z", en
 
 beforeEach(() => {
   created.mockReset().mockResolvedValue({ id: "evt1" });
+  // The cases share one title and time; the duplicate guard must not carry
+  // the first case's write into the next.
+  recentWrites.clear();
 });
 
 describe("create_event with guests", () => {

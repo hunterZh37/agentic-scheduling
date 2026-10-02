@@ -8,6 +8,7 @@ import { getJointAvailability } from "@/lib/availability/jointService";
 import { getScheduleView } from "@/lib/schedule/service";
 import { createBooking, cancelBooking, BookingError, rescheduleBooking } from "@/lib/booking/service";
 import { createDestinationEvent, updateDestinationEvent, deleteDestinationEvent } from "@/lib/calendar/write";
+import { createEventOnce } from "@/lib/calendar/createOnce";
 import { isValidTimezone } from "@/lib/validation";
 import { diffItems, progress, withItems, NOTES_MAX } from "@/lib/todos/items";
 import { createNudge, listUpcomingNudges, cancelNudge } from "@/lib/nudge/service";
@@ -567,9 +568,14 @@ export function createEventTool() {
 
       const account = await resolveTargetAccount(input.accountEmail);
       if ("error" in account) return JSON.stringify(account);
+      const title = (input.title as string).trim();
+
+      // Written at most once: see createEventOnce (owner, 2026-10-02:
+      // "Meeting with Yosef" landed twice after one "Done").
+      let outcome: Awaited<ReturnType<typeof createEventOnce>>;
       try {
-        const created = await createDestinationEvent(account, {
-          title: (input.title as string).trim(),
+        outcome = await createEventOnce(account, {
+          title,
           start,
           end,
           description: invite ? invite.description : (input.description as string | undefined)?.trim() || undefined,
@@ -588,21 +594,27 @@ export function createEventTool() {
               }
             : {}),
         });
-        return JSON.stringify({
-          ok: true,
-          eventId: created.id,
-          // Null when the provider declined or the account cannot host one —
-          // say so rather than implying a link exists.
-          videoLink: invite ? (invite.videoLink ?? null) : (created.videoLink ?? null),
-          account: account.email,
-          recurring: !!recurrenceRule,
-          start: start.toISOString(),
-          end: end.toISOString(),
-          ...(invite ? { invited: attendees.list.map((a) => a.email), meeting: invite.meeting } : {}),
-        });
       } catch (err) {
         return JSON.stringify({ error: "event_failed", message: err instanceof Error ? err.message : "Unknown error" });
       }
+      if (!outcome) {
+        return JSON.stringify({ error: "event_failed", message: "The calendar write failed. Nothing was created." });
+      }
+      return JSON.stringify({
+        ok: true,
+        eventId: outcome.eventId,
+        // Null when the provider declined or the account cannot host one —
+        // say so rather than implying a link exists.
+        videoLink: invite ? (invite.videoLink ?? null) : outcome.videoLink,
+        account: account.email,
+        recurring: !!recurrenceRule,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        ...(outcome.duplicate
+          ? { duplicate: true, message: `"${title}" is already on that calendar at that time with those guests — kept the existing one; no new invite was sent.` }
+          : {}),
+        ...(invite && !outcome.duplicate ? { invited: attendees.list.map((a) => a.email), meeting: invite.meeting } : {}),
+      });
     },
   });
 }

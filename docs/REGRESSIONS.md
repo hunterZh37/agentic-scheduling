@@ -521,6 +521,7 @@ belongs to which account.
 
 ## Agent capability parity
 
+| 66 | "The event was created as a duplicate twice. The event should just be one when I ask Alex to create an event" — "Meeting with Yosef, 9 to 10" became two Google events a minute apart after one "Done" | `create_event` had no idempotency at all, unlike `create_actionable` (#42): the same tool call executed twice wrote two provider events. Which path doubled it (the model calling the tool twice, or the request running twice) is not recoverable without tool-call logs; the guard closes both | `test` `src/lib/agent/eventDuplicate.test.ts` — an identical event already on that calendar (title case-insensitive, same start, end and guests) is returned with `duplicate:true` and nothing is written; two simultaneous identical calls write once (`recentWrites` in-process claim); a failed lookup never blocks the write; a different time, title or guest list still creates, so an invite is never swallowed. One helper, `src/lib/calendar/createOnce.ts`, serves Alex's and the MCP `create_event`. Prompt: create each event once, check get_schedule when unsure |
 **Watch:** anything the agent can create it must also be able to SEE and CHANGE.
 A create-only or cancel-only surface guarantees the wrong workaround: with no
 `update_actionable` it made duplicates (#21), and with no `reschedule_booking` a

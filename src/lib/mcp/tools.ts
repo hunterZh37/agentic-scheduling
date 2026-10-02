@@ -1,6 +1,7 @@
 import { CreatedVia } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { diffItems, NOTES_MAX } from "@/lib/todos/items";
+import { createEventOnce } from "@/lib/calendar/createOnce";
 import { getAvailability } from "@/lib/availability/service";
 import { computeMutualSlots } from "@/lib/agent/mutualSlots";
 import { createBooking, BookingError } from "@/lib/booking/service";
@@ -238,11 +239,13 @@ const createEventTool: McpTool = {
     const title = str(a.title);
     if (!title) throw new Error("title is required");
     const account = await resolveTarget(a.accountEmail);
-    const created = await createDestinationEvent(account, {
+    // Written at most once (same title, time and calendar): see createEventOnce.
+    const created = await createEventOnce(account, {
       title, start, end, description: str(a.description), location: str(a.location),
       conference: a.addVideoLink !== false,
     });
-    return { ok: true, eventId: created.id, videoLink: created.videoLink ?? null, account: account.email };
+    if (!created) throw new Error("The calendar write failed. Nothing was created.");
+    return { ok: true, eventId: created.eventId, videoLink: created.videoLink, account: account.email, ...(created.duplicate ? { duplicate: true } : {}) };
   },
 };
 
