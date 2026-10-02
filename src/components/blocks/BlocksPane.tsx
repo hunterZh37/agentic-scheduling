@@ -1,10 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { DateTime } from "luxon";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
 import { locationHref, locationLabel } from "@/lib/maps";
 import { centeredScrollTop, nearestScroller } from "@/lib/dom/centerInScroller";
+import { dayBlockItems, mergeTimeline } from "./timeline";
+import { scheduleView, type ScheduleView } from "@/lib/dom/scheduleView";
 import { accountVar } from "@/lib/design/accounts";
 import { friendlyRecurrence, presetToRule, recurrenceEnded, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
@@ -285,6 +287,11 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   const [itemError, setItemError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Sections (Today, then Reserved time) or Timeline (one clock-ordered list
+  // with the day's blocks in it). Remembered per browser; Sections by default.
+  const view = useSyncExternalStore(scheduleView.subscribe, scheduleView.get, scheduleView.getServer);
+  const [reservedOpen, setReservedOpen] = useState(false);
+  const chooseView = (v: ScheduleView) => scheduleView.set(v);
   // Live clock driving the red "now" marker in the agenda; ticks each minute.
   const [now, setNow] = useState<DateTime>(() => DateTime.now().setZone(OWNER_TIMEZONE));
   // The now-line row/element; on first load we scroll it to the center of the
@@ -772,10 +779,13 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
         colorVar: "--state-birthday",
       })),
     ];
-    return items.sort(
+    const sorted = items.sort(
       (a, b) => Number(a.allDay) - Number(b.allDay) || a.start.localeCompare(b.start)
     );
-  }, [events, dayBookings, timedTodos, dayBirthdays]);
+    // Timeline: the day's block occurrences join the list in clock order, so
+    // the day reads "Sleep, Breakfast, the meeting, Gym" (owner, 2026-10-02).
+    return view === "timeline" ? mergeTimeline(sorted, dayBlockItems(blocks, selectedDay)) : sorted;
+  }, [events, dayBookings, timedTodos, dayBirthdays, view, blocks, selectedDay]);
 
   // Where the current-time marker sits in the agenda: after every item that has
   // already started, before the first upcoming (or all-day) item. Only shown
@@ -831,9 +841,24 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
           <h2 className={styles.headerTitle}>Schedule</h2>
           {loading && <Spinner className={styles.headerSpinner} label="Loading blocks" />}
         </div>
-        <button className={styles.addBtn} onClick={() => setItemExpanded(true)} aria-label="Add item">
-          +
-        </button>
+        <div className={styles.headerRight}>
+          <div className={styles.segmented} role="tablist" aria-label="Schedule layout">
+            {(["sections", "timeline"] as const).map((v) => (
+              <button
+                key={v}
+                role="tab"
+                aria-selected={view === v}
+                className={`${styles.segment} ${view === v ? styles.segmentActive : ""}`}
+                onClick={() => chooseView(v)}
+              >
+                {v === "sections" ? "Sections" : "Timeline"}
+              </button>
+            ))}
+          </div>
+          <button className={styles.addBtn} onClick={() => setItemExpanded(true)} aria-label="Add item">
+            +
+          </button>
+        </div>
       </div>
 
       {actionError && (
@@ -1064,19 +1089,18 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
               )}
               {agendaItems.map((item, idx) => {
                 const isTodo = item.kind === "todo";
-                const isBlock = item.kind === "block";
                 // A birthday is a read-only marker, not a to-do — it has no
                 // checkbox and can't be toggled/checked off.
                 const isBirthday = item.kind === "birthday";
-                // Timed todos and blocks carry their own server-backed done
-                // state (persisted across refresh); events and bookings use the
-                // local, unpersisted check set.
-                const on = isTodo || isBlock ? !!item.done : checked.has(item.key);
+                // Timed todos carry their own server-backed done state. Events,
+                // bookings AND timeline block rows use the per-occurrence
+                // check-off store keyed by the row (block:<id>:<start>): a
+                // block's own `done` flag is one value for the whole series, so
+                // crossing off today's Sleep must never strike every day's.
+                const on = isTodo ? !!item.done : checked.has(item.key);
                 const toggle = isTodo
                   ? () => void toggleTodoDone(item.todoId!, !item.done)
-                  : isBlock
-                    ? () => void toggleBlockDone(item.blockId!, !item.done)
-                    : () => toggleChecked(item.key);
+                  : () => toggleChecked(item.key);
                 const isEvent = item.kind === "event";
                 // The item happening right now (start ≤ now < end): bold it, and
                 // the now-line is overlaid on top of it at the true current-time
@@ -1274,10 +1298,27 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
         </section>
 
         <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <span className={styles.sectionTitle}>Reserved time</span>
-            <span className={styles.count}>{blocks.length}</span>
-          </div>
+          {view === "timeline" ? (
+            // The blocks are already in the timeline above; this is only the
+            // place to manage them, so it stays one line until opened.
+            <button
+              className={styles.sectionHeadToggle}
+              onClick={() => setReservedOpen((o) => !o)}
+              aria-expanded={reservedOpen}
+            >
+              <span className={styles.sectionTitle}>Manage reserved time</span>
+              <span className={styles.count}>{blocks.length}</span>
+              <span className={styles.chev} aria-hidden="true">
+                {reservedOpen ? "▴" : "▾"}
+              </span>
+            </button>
+          ) : (
+            <div className={styles.sectionHead}>
+              <span className={styles.sectionTitle}>Reserved time</span>
+              <span className={styles.count}>{blocks.length}</span>
+            </div>
+          )}
+          {(view === "sections" || reservedOpen) && (
           <ul className={styles.list}>
             {blocks.map((block) => {
               const start = new Date(block.startTime);
@@ -1399,6 +1440,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
               </button>
             </li>
           </ul>
+          )}
         </section>
 
         <section className={styles.section}>

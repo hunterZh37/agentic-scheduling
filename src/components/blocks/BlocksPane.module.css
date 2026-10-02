@@ -42,6 +42,63 @@
 .addBtn:hover {
   background: var(--hairline-strong);
 }
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* Sections | Timeline. Same shape as the calendar's Day / Week / Month. */
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-pill);
+}
+.segment {
+  padding: 5px 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--type-footnote);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.segmentActive {
+  background: var(--surface);
+  color: var(--text-1);
+  box-shadow: var(--e1);
+}
+/* The Reserved section as one line in Timeline mode: same look as a section
+   head, but a button, with a chevron. */
+.sectionHeadToggle {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: calc(100% + 2 * var(--space-5));
+  margin: 0 calc(-1 * var(--space-5));
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  background: var(--material-chrome);
+  backdrop-filter: blur(20px);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 44px;
+}
+.sectionHeadToggle .count {
+  margin-left: auto;
+}
+.chev {
+  color: var(--text-3);
+  font-size: var(--type-caption);
+}
 
 .scroll {
   flex: 1;
@@ -605,6 +662,9 @@ input.chip:focus {
 
 /* --- Phone: touch tweaks --- */
 @media (max-width: 768px) {
+  .segment {
+    padding: 11px 12px;
+  }
   /* Delete is hover-revealed on desktop; touch has no hover, so keep it visible
      (dimmed) so it stays reachable. */
   .rowDelete {
