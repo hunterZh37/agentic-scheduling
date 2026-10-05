@@ -5035,7 +5035,7 @@
         <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" data-composition-frame-label="External services" x="1062" y="12" width="206" height="552" rx="12" class="c-region" stroke-width="1"/>
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="visitor" data-edge-to="proxy" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="visitor-proxy" data-composition-points="190,72;215,72;215,175;240,175" d="M 190 72 L 207 72 Q 215 72 215 80 L 215 167 Q 215 175 223 175 L 240 175" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="visitor" data-edge-to="proxy" data-edge-label="HTTPS, two public hosts" data-edge-key="0" data-edge-id="visitor-proxy" data-composition-points="190,72;215,72;215,175;240,175" d="M 190 72 L 207 72 Q 215 72 215 80 L 215 167 Q 215 175 223 175 L 240 175" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="owner" data-edge-to="proxy" data-edge-label="session cookie" data-edge-key="1" data-edge-id="owner-proxy" data-composition-points="190,402;215,402;215,189;240,189" d="M 190 402 L 207 402 Q 215 402 215 394 L 215 197 Q 215 189 223 189 L 240 189" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="proxy" data-edge-to="api-public" data-edge-label="allowlisted paths" data-edge-key="2" data-edge-id="proxy-public" data-composition-points="390,175;415,175;415,72;440,72" d="M 390 175 L 407 175 Q 415 175 415 167 L 415 80 Q 415 72 423 72 L 440 72" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="proxy" data-edge-to="api-private" data-edge-label="owner only" data-edge-key="3" data-edge-id="proxy-private" data-composition-points="390,189;415,189;415,402;440,402" d="M 390 189 L 407 189 Q 415 189 415 197 L 415 394 Q 415 402 423 402 L 440 402" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -5247,9 +5247,9 @@
         </g>
 
         <!-- Connection labels -->
-        <g data-detail="context" data-edge-from="visitor" data-edge-to="proxy" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="visitor-proxy">
-          <rect x="198" y="103.5" width="34" height="14" rx="3" class="c-mask"/>
-          <text x="215" y="113.5" class="t-backend" font-size="8" text-anchor="middle">HTTPS</text>
+        <g data-detail="context" data-edge-from="visitor" data-edge-to="proxy" data-edge-label="HTTPS, two public hosts" data-edge-key="0" data-edge-id="visitor-proxy">
+          <rect x="154.8" y="103.5" width="120.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="215" y="113.5" class="t-backend" font-size="8" text-anchor="middle">HTTPS, two public hosts</text>
         </g>
         <g data-detail="context" data-edge-from="owner" data-edge-to="proxy" data-edge-label="session cookie" data-edge-key="1" data-edge-id="owner-proxy">
           <rect x="176.4" y="275.5" width="77.2" height="14" rx="3" class="c-mask"/>
@@ -5538,6 +5538,7 @@
         <ul>
           <li>&bull; Visitors, the public agent and unauthenticated MCP never see titles or attendees</li>
           <li>&bull; Every alert and reminder leaves through the notify pipeline</li>
+          <li>&bull; The booking page answers on bookwithhunter.com and on book.hunterzhangconsulting.com, for networks whose web filter blocks the younger domain</li>
         </ul>
       </div>
     </div>

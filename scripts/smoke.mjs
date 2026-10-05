@@ -164,6 +164,22 @@ await check("day link to the booking page is served", async () => {
   return { ok, detail: `status=${r.status}${ok ? ", page identity present" : ""}` };
 });
 
+// --- Fallback host ------------------------------------------------------------
+// bookwithhunter.com is a young domain that some corporate web filters still
+// rate "Phishing" and block at the TLS handshake (a client on an office network
+// could not open the link at all on 2026-10-05, while cellular worked). The same
+// project also answers on a subdomain of the older consulting domain, so a
+// blocked visitor has a link that works. This is DNS + a Vercel domain binding,
+// which nothing in the repo exercises: only a live fetch can prove it is still
+// wired. Checked regardless of BASE, since the point is the SECOND host.
+const FALLBACK_HOST = "https://book.hunterzhangconsulting.com";
+await check("fallback host serves the booking page", async () => {
+  const r = await fetch(`${FALLBACK_HOST}/book`, { redirect: "manual" });
+  const html = r.status === 200 ? await r.text() : "";
+  const ok = r.status === 200 && /Book time with/.test(html);
+  return { ok, detail: `${FALLBACK_HOST} status=${r.status}${ok ? ", page identity present" : ""}` };
+});
+
 // --- Sign-in ----------------------------------------------------------------
 // The button must be in the HTML as sent: /login is a server component now,
 // precisely so a visitor (or a reputation crawler) sees a real page without

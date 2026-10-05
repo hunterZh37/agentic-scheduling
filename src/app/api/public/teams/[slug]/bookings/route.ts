@@ -4,6 +4,7 @@ import { createBooking, BookingError } from "@/lib/booking/service";
 import { canBook, recordBooking } from "@/lib/agent/rateLimit";
 import { teamForSlug, firstNamesLabel } from "@/lib/teams/resolve";
 import { HOST } from "@/lib/booking/publicConfig";
+import { publicOrigin } from "@/lib/booking/publicOrigin";
 
 export const runtime = "nodejs";
 
@@ -94,6 +95,7 @@ export async function POST(
       attendeeEmail: attendeeEmail.trim(),
       attendeeTimezone,
       createdVia: CreatedVia.public_link,
+      publicOrigin: publicOrigin(req.headers.get("host")),
       coHostIds: team.coHostIds,
       additionalAttendeeEmails: team.coHosts.map((c) => c.email),
       teamId: team.id,

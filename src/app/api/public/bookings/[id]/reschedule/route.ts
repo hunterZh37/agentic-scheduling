@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rescheduleBooking, BookingError } from "@/lib/booking/service";
 import { verifyManageToken } from "@/lib/booking/manageToken";
 import { checkRescheduleAllowed } from "@/lib/agent/rateLimit";
+import { publicOrigin } from "@/lib/booking/publicOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,11 @@ export async function POST(
   }
 
   try {
-    const booking = await rescheduleBooking(id, { start, end });
+    const booking = await rescheduleBooking(id, {
+      start,
+      end,
+      publicOrigin: publicOrigin(req.headers.get("host")),
+    });
     return NextResponse.json(
       {
         ok: true,

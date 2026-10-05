@@ -3,6 +3,7 @@ import { CreatedVia } from "@prisma/client";
 import { createBooking, BookingError } from "@/lib/booking/service";
 import { canBook, recordBooking } from "@/lib/agent/rateLimit";
 import { OWNER_FIRST_NAME } from "@/lib/booking/publicConfig";
+import { publicOrigin } from "@/lib/booking/publicOrigin";
 
 export const runtime = "nodejs";
 
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       attendeeEmail: attendeeEmail.trim(),
       attendeeTimezone,
       createdVia: CreatedVia.public_link,
+      publicOrigin: publicOrigin(req.headers.get("host")),
     });
     recordBooking(ip);
     return NextResponse.json(

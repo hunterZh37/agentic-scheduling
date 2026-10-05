@@ -299,7 +299,7 @@
       "id": "visitor-proxy",
       "from": "visitor",
       "to": "proxy",
-      "label": "HTTPS",
+      "label": "HTTPS, two public hosts",
       "variant": "emphasis"
     },
     {
@@ -433,7 +433,8 @@
       "title": "Public means free/busy only",
       "items": [
         "Visitors, the public agent and unauthenticated MCP never see titles or attendees",
-        "Every alert and reminder leaves through the notify pipeline"
+        "Every alert and reminder leaves through the notify pipeline",
+        "The booking page answers on bookwithhunter.com and on book.hunterzhangconsulting.com, for networks whose web filter blocks the younger domain"
       ]
     }
   ]

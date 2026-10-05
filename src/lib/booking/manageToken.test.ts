@@ -21,4 +21,9 @@ describe("manage token", () => {
     const url = buildManageUrl("booking_abc", "sig123");
     expect(url).toContain("/manage/booking_abc?t=sig123");
   });
+
+  it("builds the manage URL on the origin the visitor booked from", () => {
+    const url = buildManageUrl("booking_abc", "sig123", "https://book.hunterzhangconsulting.com");
+    expect(url).toBe("https://book.hunterzhangconsulting.com/manage/booking_abc?t=sig123");
+  });
 });

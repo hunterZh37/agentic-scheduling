@@ -3,6 +3,7 @@ import { runTeamAgent, type ChatMessage } from "@/lib/agent/run";
 import { checkMessageAllowed, tryReserveBooking, releaseBooking } from "@/lib/agent/rateLimit";
 import { teamForSlug, firstNamesLabel } from "@/lib/teams/resolve";
 import { HOST } from "@/lib/booking/publicConfig";
+import { publicOrigin } from "@/lib/booking/publicOrigin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -53,6 +54,7 @@ export async function POST(
       {
         tryReserveBooking: () => tryReserveBooking(bookingKey),
         releaseBooking: () => releaseBooking(bookingKey),
+        publicOrigin: publicOrigin(req.headers.get("host")),
       },
       {
         id: team.id,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runPublicAgent, type ChatMessage } from "@/lib/agent/run";
 import { checkMessageAllowed, tryReserveBooking, releaseBooking } from "@/lib/agent/rateLimit";
+import { publicOrigin } from "@/lib/booking/publicOrigin";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const reply = await runPublicAgent(messages, {
       tryReserveBooking: () => tryReserveBooking(bookingKey),
       releaseBooking: () => releaseBooking(bookingKey),
+      publicOrigin: publicOrigin(req.headers.get("host")),
     });
     return NextResponse.json({ reply });
   } catch (err) {

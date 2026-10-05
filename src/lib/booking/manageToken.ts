@@ -26,7 +26,8 @@ export async function verifyManageToken(
   return safeEqual(token, expected);
 }
 
-/// The full attendee-facing manage URL for a booking.
-export function buildManageUrl(bookingId: string, token: string): string {
-  return `${PUBLIC_BASE_URL}/manage/${bookingId}?t=${token}`;
+/// The full attendee-facing manage URL for a booking. `origin` is the public
+/// origin the visitor booked on (see publicOrigin); default the primary domain.
+export function buildManageUrl(bookingId: string, token: string, origin: string = PUBLIC_BASE_URL): string {
+  return `${origin}/manage/${bookingId}?t=${token}`;
 }

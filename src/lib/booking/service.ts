@@ -98,6 +98,11 @@ export interface CreateBookingInput {
   /// Skip the attendee confirmation email. Used by the demo, whose fixed demo
   /// attendee address is not a real inbox — sending would just bounce.
   suppressAttendeeEmail?: boolean;
+  /// The public origin the visitor booked on (see publicOrigin). Links we send
+  /// them (the manage/reschedule link) stay on that host, because a visitor on
+  /// the alias host is there precisely because the primary host is blocked for
+  /// them. Unset = the primary domain.
+  publicOrigin?: string;
   /// JOINT (team) booking: the co-hosts who must ALSO be free for this slot.
   /// Their free/busy is re-checked at write time alongside the owner's, so a
   /// direct API call can never book a time one of them is busy. Empty/absent =
@@ -227,7 +232,7 @@ export async function createBooking(
   // Pre-generate the booking id so the self-serve manage link (reschedule /
   // cancel) can be embedded in the invite, which is written before the row.
   const bookingId = crypto.randomUUID();
-  const manageUrl = buildManageUrl(bookingId, await signManageToken(bookingId));
+  const manageUrl = buildManageUrl(bookingId, await signManageToken(bookingId), input.publicOrigin);
 
   const descriptionArgs = {
     start: input.start,
@@ -346,6 +351,7 @@ export async function createBooking(
     await sendAttendeeConfirmation(booking, {
       hostLabel: input.hostLabel,
       hosts: input.hosts,
+      publicOrigin: input.publicOrigin,
     }).catch((err) => console.error("[booking] attendee confirmation email failed:", err));
   }
 
@@ -485,10 +491,15 @@ async function sendAttendeeConfirmation(
   booking: Booking,
   // Same team context passed to the invite body, so the confirmation EMAIL is
   // team-aware too (it renders separately from the calendar event). Absent = solo.
-  team?: { hostLabel?: string; hosts?: { name: string; linkedin?: string | null }[] }
+  team?: {
+    hostLabel?: string;
+    hosts?: { name: string; linkedin?: string | null }[];
+    /// The origin the visitor booked on; the manage link stays there.
+    publicOrigin?: string;
+  }
 ): Promise<void> {
   if (!optionalEnv("RESEND_API_KEY")) return;
-  const manageUrl = buildManageUrl(booking.id, await signManageToken(booking.id));
+  const manageUrl = buildManageUrl(booking.id, await signManageToken(booking.id), team?.publicOrigin);
   const args = {
     start: booking.startTime,
     end: booking.endTime,
@@ -563,7 +574,7 @@ export async function cancelBooking(
 /// already-cancelled id.
 export async function rescheduleBooking(
   oldId: string,
-  input: { start: Date; end: Date; title?: string }
+  input: { start: Date; end: Date; title?: string; publicOrigin?: string }
 ): Promise<Booking> {
   const old = await prisma.booking.findUnique({ where: { id: oldId } });
   if (!old || old.status === BookingStatus.cancelled) {
@@ -582,6 +593,7 @@ export async function rescheduleBooking(
     createdVia: old.createdVia,
     // A reschedule sends one "moved" alert (below), not a new-booking alert.
     suppressHostAlert: true,
+    publicOrigin: input.publicOrigin,
   });
 
   // Old event goes away only after the new one is safely booked. Best-effort:

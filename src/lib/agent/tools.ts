@@ -105,6 +105,9 @@ export function getAvailabilityTool(team?: TeamBookingContext) {
 export interface PublicBookingFence {
   tryReserveBooking: () => boolean;
   releaseBooking: () => void;
+  /// The public origin the visitor is chatting from (see publicOrigin), so the
+  /// manage link in their confirmation stays on the host that works for them.
+  publicOrigin?: string;
 }
 
 /// Split slots into those inside the visitor's requested window and the rest of
@@ -160,6 +163,7 @@ export function createPublicBookingTool(fence: PublicBookingFence, team?: TeamBo
           attendeeEmail: input.attendeeEmail as string,
           attendeeTimezone: input.attendeeTimezone as string,
           createdVia: CreatedVia.public_agent,
+          publicOrigin: fence.publicOrigin,
           ...(team
             ? {
                 coHostIds: team.coHostIds,

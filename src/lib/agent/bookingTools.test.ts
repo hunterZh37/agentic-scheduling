@@ -13,8 +13,8 @@ vi.mock("@/lib/booking/service", () => ({
   },
 }));
 
-import { rescheduleBookingTool, deleteBookingTool } from "./tools";
-import { rescheduleBooking } from "@/lib/booking/service";
+import { rescheduleBookingTool, deleteBookingTool, createPublicBookingTool } from "./tools";
+import { rescheduleBooking, createBooking } from "@/lib/booking/service";
 
 // Over WhatsApp the owner could CANCEL a booking but not MOVE one: the private
 // agent (which the SMS/WhatsApp channel runs) had delete_booking and no
@@ -83,3 +83,42 @@ describe("booking verbs available to the agent", () => {
     expect(desc).toMatch(/NOT the same as cancelling and re-booking/i);
   });
 });
+
+// A visitor who chats on the alias host (their network blocks the primary
+// domain) must get a manage link on that host, exactly like the form path does:
+// the chat widget is the other way to book (docs/REGRESSIONS.md #67).
+describe("public chat booking keeps the visitor's host", () => {
+  beforeEach(() => {
+    vi.mocked(createBooking).mockReset().mockResolvedValue({
+      id: "b1",
+      startTime: new Date("2026-08-10T20:00:00Z"),
+      endTime: new Date("2026-08-10T20:30:00Z"),
+    } as never);
+  });
+
+  const fence = (publicOrigin?: string) => ({
+    tryReserveBooking: () => true,
+    releaseBooking: () => {},
+    publicOrigin,
+  });
+  const input = {
+    startISO: "2026-08-10T20:00:00Z",
+    endISO: "2026-08-10T20:30:00Z",
+    attendeeName: "Mark",
+    attendeeEmail: "mark@example.com",
+    attendeeTimezone: "America/Los_Angeles",
+  };
+
+  it("passes the origin the visitor is chatting from to the booking", async () => {
+    await run(createPublicBookingTool(fence("https://book.hunterzhangconsulting.com")), input);
+    expect(vi.mocked(createBooking).mock.calls[0][0]).toMatchObject({
+      publicOrigin: "https://book.hunterzhangconsulting.com",
+    });
+  });
+
+  it("no origin known: leaves it to the primary domain", async () => {
+    await run(createPublicBookingTool(fence()), input);
+    expect(vi.mocked(createBooking).mock.calls[0][0].publicOrigin).toBeUndefined();
+  });
+});
+
