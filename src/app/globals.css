@@ -97,3 +97,35 @@ button:not(:disabled):active {
     font-size: 16px;
   }
 }
+
+/* --- Scroll affordance ------------------------------------------------------
+   A scroller with more content below its bottom edge fades that edge, so the
+   cut-off is never mistaken for the end (owner, 2026-10-02). The fade is a
+   sticky pseudo-element at the end of the content, shown only while
+   data-below="true" (set by useScrollEdges). It takes no space (negative
+   margin), takes no clicks, and matches the surface behind it, overridable
+   per scroller with --scroll-edge-bg. Bottom only: top edges already sit
+   under a sticky header or a dialog head. */
+.scrollEdges::after {
+  content: "";
+  position: sticky;
+  bottom: 0;
+  display: block;
+  grid-column: 1 / -1;
+  height: 36px;
+  margin-top: -36px;
+  flex: none;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--scroll-edge-bg, var(--surface)), transparent);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+  z-index: 3;
+}
+.scrollEdges[data-below="true"]::after {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scrollEdges::after {
+    transition: none;
+  }
+}

@@ -7,6 +7,7 @@ import { locationHref, locationLabel } from "@/lib/maps";
 import { centeredScrollTop, nearestScroller } from "@/lib/dom/centerInScroller";
 import { dayBlockItems, mergeTimeline } from "./timeline";
 import { scheduleView, type ScheduleView } from "@/lib/dom/scheduleView";
+import { useScrollEdges } from "@/lib/dom/scrollEdges";
 import { accountVar } from "@/lib/design/accounts";
 import { friendlyRecurrence, presetToRule, recurrenceEnded, type RecurrencePreset } from "@/lib/recurrence/friendly";
 import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
@@ -291,6 +292,9 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   // with the day's blocks in it). Remembered per browser; Sections by default.
   const view = useSyncExternalStore(scheduleView.subscribe, scheduleView.get, scheduleView.getServer);
   const [reservedOpen, setReservedOpen] = useState(false);
+  // Fade the bottom edge of each scroller while there is more below it.
+  const paneScrollRef = useRef<HTMLDivElement>(null);
+  const agendaListRef = useRef<HTMLUListElement>(null);
   const chooseView = (v: ScheduleView) => scheduleView.set(v);
   // Live clock driving the red "now" marker in the agenda; ticks each minute.
   const [now, setNow] = useState<DateTime>(() => DateTime.now().setZone(OWNER_TIMEZONE));
@@ -787,6 +791,12 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
     return view === "timeline" ? mergeTimeline(sorted, dayBlockItems(blocks, selectedDay)) : sorted;
   }, [events, dayBookings, timedTodos, dayBirthdays, view, blocks, selectedDay]);
 
+  // The pane scroller is always mounted (content changes are observed inside
+  // the hook); the Today list mounts only when it has rows or the add card is
+  // open, so its dep is exactly that condition.
+  const paneEdges = useScrollEdges(paneScrollRef, view);
+  const listEdges = useScrollEdges(agendaListRef, `${view}:${agendaItems.length + untimedTodos.length}:${itemExpanded}`);
+
   // Where the current-time marker sits in the agenda: after every item that has
   // already started, before the first upcoming (or all-day) item. Only shown
   // when the selected day is today; -1 hides it. Compared by timestamp so the
@@ -867,7 +877,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
         </p>
       )}
 
-      <div className={styles.scroll}>
+      <div ref={paneScrollRef} className={`${styles.scroll} scrollEdges`} data-below={paneEdges.below}>
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionTitle}>{agendaLabel}</span>
@@ -876,7 +886,7 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
           {untimedTodos.length === 0 && agendaItems.length === 0 && !itemExpanded ? (
             <p className={styles.empty}>Nothing scheduled.</p>
           ) : (
-            <ul className={`${styles.list} ${styles.agendaList}`}>
+            <ul ref={agendaListRef} className={`${styles.list} ${styles.agendaList} scrollEdges`} data-below={listEdges.below}>
               {untimedTodos.map((t) => {
                 // Open the same editor a timed actionable uses. Untimed to-dos
                 // had no click target, so they were the one row you couldn't edit.

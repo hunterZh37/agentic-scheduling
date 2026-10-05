@@ -7,6 +7,7 @@ import { PublicAgentChat } from "./PublicAgentChat";
 import { useSheetDrag } from "@/lib/motion/useSheetDrag";
 import { AnimatedHeight } from "@/lib/motion/AnimatedHeight";
 import { parseDayParam, dayLinkSearch } from "@/lib/booking/dayLink";
+import { useScrollEdges } from "@/lib/dom/scrollEdges";
 import styles from "./BookingPage.module.css";
 
 type Mode = "pick" | "agent";
@@ -107,6 +108,9 @@ export function BookingPage({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+  // The times list fades its bottom edge while more times sit below the fold.
+  const timesBodyRef = useRef<HTMLDivElement>(null);
+  const timesEdges = useScrollEdges(timesBodyRef, `${slots.length}:${slotDialogOpen}:${dialogStep}`);
   const sheet = useSheetDrag({
     enabled: isPhone && slotDialogOpen,
     onDismiss: () => setSlotDialogOpen(false),
@@ -678,7 +682,8 @@ export function BookingPage({
                           />
                         </div>
                       ) : (
-                      <div className={styles.slotDialogBody}>
+                      <div ref={timesBodyRef} className={`${styles.slotDialogBody} scrollEdges`} data-below={timesEdges.below}>
+                      <div className={styles.slotGrid}>
                         {loadingSlots ? (
                           <p className={styles.slotHint}>Loading…</p>
                         ) : slots.length === 0 ? (
@@ -708,6 +713,7 @@ export function BookingPage({
                             </button>
                           ))
                         )}
+                      </div>
                       </div>
                       )}
                     </div>
