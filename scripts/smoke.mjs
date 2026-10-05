@@ -168,8 +168,10 @@ await check("day link to the booking page is served", async () => {
 // bookwithhunter.com is a young domain that some corporate web filters still
 // rate "Phishing" and block at the TLS handshake (a client on an office network
 // could not open the link at all on 2026-10-05, while cellular worked). The same
-// project also answers on a subdomain of the older consulting domain, so a
-// blocked visitor has a link that works. This is DNS + a Vercel domain binding,
+// project also answers on a subdomain of the consulting domain. NOTE: that
+// domain was registered the SAME day (2026-07-13), so a filter that blocks by
+// domain age blocks both; the alias only helps against a rating specific to
+// bookwithhunter.com. This is DNS + a Vercel domain binding,
 // which nothing in the repo exercises: only a live fetch can prove it is still
 // wired. Checked regardless of BASE, since the point is the SECOND host.
 const FALLBACK_HOST = "https://book.hunterzhangconsulting.com";
