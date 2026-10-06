@@ -29,6 +29,10 @@ export interface CalendarEvent {
   reminders?: number[];
   /// Link to open the event in the provider's web UI.
   htmlLink?: string;
+  /// For one occurrence of a recurring event: the id of the series it belongs
+  /// to (Google `recurringEventId`, Microsoft `seriesMasterId`). Deleting or
+  /// editing THAT id acts on the whole series; the occurrence id acts on one.
+  seriesId?: string;
 }
 
 // Best-effort fallback: pull a Zoom/Meet/Teams link out of free-form event
@@ -92,6 +96,7 @@ async function listGoogleEvents(
     nextPageToken?: string;
     items?: Array<{
       id: string;
+      recurringEventId?: string;
       summary?: string;
       status?: string;
       location?: string;
@@ -133,6 +138,7 @@ async function listGoogleEvents(
       const videoEntry = it.conferenceData?.entryPoints?.find((e) => e.entryPointType === "video");
       events.push({
         id: it.id,
+        seriesId: it.recurringEventId || undefined,
         accountEmail: email,
         title: it.summary ?? "(no title)",
         start: new Date(startStr),
@@ -184,6 +190,7 @@ async function listMicrosoftEvents(
     "@odata.nextLink"?: string;
     value?: Array<{
       id: string;
+      seriesMasterId?: string;
       subject?: string;
       isAllDay?: boolean;
       start: { dateTime: string; timeZone: string };
@@ -209,7 +216,7 @@ async function listMicrosoftEvents(
     $orderby: "start/dateTime",
     $top: "250",
     $select:
-      "id,subject,isAllDay,start,end,location,onlineMeeting,organizer,attendees,bodyPreview,body,webLink,reminderMinutesBeforeStart,isReminderOn",
+      "id,seriesMasterId,subject,isAllDay,start,end,location,onlineMeeting,organizer,attendees,bodyPreview,body,webLink,reminderMinutesBeforeStart,isReminderOn",
   });
   let url: string | undefined = `https://graph.microsoft.com/v1.0/me/calendarView?${params}`;
   const headers = {
@@ -227,6 +234,7 @@ async function listMicrosoftEvents(
     for (const ev of data.value ?? []) {
       events.push({
         id: ev.id,
+        seriesId: ev.seriesMasterId || undefined,
         accountEmail: email,
         title: ev.subject ?? "(no title)",
         start: parseUtc(ev.start.dateTime),
