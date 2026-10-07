@@ -13,7 +13,11 @@
 //
 // Exit code 0 = all passed, 1 = at least one failure.
 
-const BASE = process.env.BASE || "https://bookwithhunter.com";
+const BASE = process.env.BASE || "https://book.hunterzhangconsulting.com";
+// Where sign-in lives: the host whose OAuth callback is registered with
+// Google. The public booking host is an alias domain since 2026-10-07 (see
+// the "original host" check below); OAuth stayed on the original domain.
+const AUTH_BASE = process.env.AUTH_BASE || "https://bookwithhunter.com";
 const results = [];
 
 const record = (name, ok, detail) => {
@@ -32,6 +36,8 @@ const check = async (name, fn) => {
 };
 
 const get = (path, opts) => fetch(BASE + path, { redirect: "manual", ...opts });
+// Sign-in lives on AUTH_BASE (see above); its checks fetch there.
+const getAuth = (path, opts) => fetch(AUTH_BASE + path, { redirect: "manual", ...opts });
 
 const isoDay = (offsetDays) => {
   const d = new Date();
@@ -164,22 +170,21 @@ await check("day link to the booking page is served", async () => {
   return { ok, detail: `status=${r.status}${ok ? ", page identity present" : ""}` };
 });
 
-// --- Fallback host ------------------------------------------------------------
-// bookwithhunter.com is a young domain that some corporate web filters still
-// rate "Phishing" and block at the TLS handshake (a client on an office network
-// could not open the link at all on 2026-10-05, while cellular worked). The same
-// project also answers on a subdomain of the consulting domain. NOTE: that
-// domain was registered the SAME day (2026-07-13), so a filter that blocks by
-// domain age blocks both; the alias only helps against a rating specific to
-// bookwithhunter.com. This is DNS + a Vercel domain binding,
-// which nothing in the repo exercises: only a live fetch can prove it is still
-// wired. Checked regardless of BASE, since the point is the SECOND host.
-const FALLBACK_HOST = "https://book.hunterzhangconsulting.com";
-await check("fallback host serves the booking page", async () => {
-  const r = await fetch(`${FALLBACK_HOST}/book`, { redirect: "manual" });
+// --- The original host -------------------------------------------------------
+// bookwithhunter.com is a young domain that corporate web filters rate
+// "Phishing" and block at the TLS handshake (a client on an office network
+// could not open the link at all on 2026-10-05, while cellular worked). Since
+// 2026-10-07 the public booking host is book.hunterzhangconsulting.com, a
+// subdomain of the consulting domain (clean on every engine, rated by
+// FortiGuard), and the original domain stays bound to the same project so
+// every link ever sent still works. That binding is DNS + a Vercel domain,
+// which nothing in the repo exercises: only a live fetch can prove it.
+const ORIGINAL_HOST = "https://bookwithhunter.com";
+await check("original host still serves the booking page", async () => {
+  const r = await fetch(`${ORIGINAL_HOST}/book`, { redirect: "manual" });
   const html = r.status === 200 ? await r.text() : "";
   const ok = r.status === 200 && /Book time with/.test(html);
-  return { ok, detail: `${FALLBACK_HOST} status=${r.status}${ok ? ", page identity present" : ""}` };
+  return { ok, detail: `${ORIGINAL_HOST} status=${r.status}${ok ? ", page identity present" : ""}` };
 });
 
 // --- Sign-in ----------------------------------------------------------------
@@ -190,13 +195,13 @@ await check("fallback host serves the booking page", async () => {
 // rendering properly. Look at the HTML first, and keep the chunk search as a
 // fallback so a future client-side render is reported, not silently accepted.
 await check("login page ships the Google button", async () => {
-  const html = await (await fetch(`${BASE}/login`)).text();
+  const html = await (await getAuth("/login")).text();
   if (html.includes("Sign in with Google") && html.includes("/api/auth/google/start")) {
     return { ok: true, detail: "in the server-rendered HTML" };
   }
   const chunks = [...new Set(html.match(/\/_next\/static\/chunks\/[\w.-]+\.js/g) || [])];
   for (const c of chunks) {
-    if ((await (await fetch(BASE + c)).text()).includes("Sign in with Google")) {
+    if ((await (await getAuth(c)).text()).includes("Sign in with Google")) {
       return { ok: false, detail: `only in a JS chunk (${c}) — a crawler sees no sign-in path` };
     }
   }
@@ -204,11 +209,11 @@ await check("login page ships the Google button", async () => {
 });
 
 await check("Google sign-in points back at THIS host", async () => {
-  const r = await get("/api/auth/google/start");
+  const r = await getAuth("/api/auth/google/start");
   if (r.status === 503) return { ok: false, detail: "503 - owner allowlist is empty" };
   const loc = r.headers.get("location") || "";
   const redirectUri = decodeURIComponent((loc.match(/redirect_uri=([^&]+)/) || [])[1] || "");
-  const wantHost = new URL(BASE).host;
+  const wantHost = new URL(AUTH_BASE).host;
   const gotHost = redirectUri ? new URL(redirectUri).host : "";
   // A cookie set on a different host than the one the user is on is invisible
   // to that host, so sign-in silently bounces back to the form.
@@ -219,7 +224,7 @@ await check("Google sign-in points back at THIS host", async () => {
 });
 
 await check("Google sign-in asks for identity scopes only", async () => {
-  const r = await get("/api/auth/google/start");
+  const r = await getAuth("/api/auth/google/start");
   const loc = r.headers.get("location") || "";
   // In a query string "+" means space, and decodeURIComponent does not do that.
   const scope = decodeURIComponent(((loc.match(/scope=([^&]+)/) || [])[1] || "").replace(/\+/g, " "));
@@ -230,7 +235,7 @@ await check("Google sign-in asks for identity scopes only", async () => {
 });
 
 await check("Google accepts our redirect URI", async () => {
-  const r = await get("/api/auth/google/start");
+  const r = await getAuth("/api/auth/google/start");
   const loc = r.headers.get("location");
   if (!loc) return { ok: false, detail: "no redirect issued" };
   const body = await (await fetch(loc)).text();
@@ -287,7 +292,7 @@ await check("/book says what it is in server-rendered HTML", async () => {
 });
 
 await check("/login identifies the owner in server-rendered HTML", async () => {
-  const html = await (await fetch(`${BASE}/login`)).text();
+  const html = await (await getAuth("/login")).text();
   const text = textOf(html);
   // An anonymous password box with no stated owner is the exact shape that got
   // this domain classified as phishing.

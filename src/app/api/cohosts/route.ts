@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { PUBLIC_BASE_URL } from "@/lib/env";
+import { OAUTH_BASE_URL } from "@/lib/env";
 
 export const runtime = "nodejs";
 
@@ -47,13 +47,14 @@ export async function GET(): Promise<NextResponse> {
     },
   });
   return NextResponse.json({
-    // The CANONICAL public sign-in URL — PUBLIC_BASE_URL (the real domain, e.g.
-    // https://bookwithhunter.com), NOT the host this request arrived on and NOT
+    // The CANONICAL sign-in URL — OAUTH_BASE_URL (the origin whose callback is
+    // registered with Google), NOT the host this request arrived on, NOT the
+    // public booking host (an alias domain since 2026-10-07) and NOT
     // APP_BASE_URL (an internal/webhook host). A co-host must sign in on the
-    // domain registered with Google OAuth; a .vercel.app alias is NOT registered,
-    // so signing in there fails and dumps them on /book. Using the public base
-    // keeps the invite correct no matter which URL the owner is viewing from.
-    loginUrl: new URL("/login", PUBLIC_BASE_URL).toString(),
+    // domain registered with Google OAuth; anywhere else fails and dumps them
+    // on /book. This keeps the invite correct no matter which URL the owner
+    // is viewing from.
+    loginUrl: new URL("/login", OAUTH_BASE_URL).toString(),
     coHosts: coHosts.map((c) => ({
       id: c.id,
       email: c.email,

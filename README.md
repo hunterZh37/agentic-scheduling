@@ -14,7 +14,7 @@ an open slot across your calendars again.
 and your data stays local.**
 
 **[Landing page](https://agentic-scheduling-landing.vercel.app/)** ·
-**[See it live: book time with me](https://bookwithhunter.com/book)**
+**[See it live: book time with me](https://book.hunterzhangconsulting.com/book)**
 
 ![All your calendars synchronized into one platform, run by an AI agent that takes a scheduling request over text and books the meeting for you](docs/media/agent-hero.svg)
 

@@ -1,3 +1,4 @@
+import { PUBLIC_BASE_URL } from "@/lib/env";
 import type { MetadataRoute } from "next";
 
 // Public pages only — the owner dashboard is login-gated and excluded.
@@ -5,7 +6,7 @@ import type { MetadataRoute } from "next";
 // reputation reviewers a legible picture of the site, which matters for a
 // young domain that filters would otherwise treat as suspect.
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://bookwithhunter.com";
+  const base = PUBLIC_BASE_URL;
   return [
     { url: `${base}/book`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/assistant`, changeFrequency: "monthly", priority: 0.6 },

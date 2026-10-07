@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
+vi.mock("@/lib/env", () => ({
+  OAUTH_BASE_URL: "https://bookwithhunter.com",
+  PUBLIC_BASE_URL: "https://book.hunterzhangconsulting.com",
+  optionalEnv: (k: string) => process.env[k],
+}));
 vi.mock("@/lib/db", () => ({
   prisma: { coHost: { findMany: vi.fn(), create: vi.fn() } },
 }));
@@ -88,5 +93,8 @@ describe("GET /api/cohosts", () => {
     expect(vi.mocked(prisma.coHost.findMany).mock.calls[0][0]).toMatchObject({
       include: { accounts: { where: { OR: [{ refreshToken: { not: null } }, { accessToken: { not: null } }] } } },
     });
+    // The invite's sign-in link lives on the OAuth host, not the public
+    // booking host: Google only accepts the callback registered there.
+    expect(body.loginUrl).toBe("https://bookwithhunter.com/login");
   });
 });

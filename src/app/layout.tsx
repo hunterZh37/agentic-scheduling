@@ -4,6 +4,7 @@ import { HOST } from "@/lib/booking/publicConfig";
 
 const OWNER_NAME = HOST.name;
 import { ThemeProvider, themeInitScript } from "@/components/theme/ThemeProvider";
+import { PUBLIC_BASE_URL } from "@/lib/env";
 
 // Real, specific metadata (owner name, what the site is, canonical base URL)
 // rather than a bare generic title. Besides normal SEO, this matters for web
@@ -11,7 +12,7 @@ import { ThemeProvider, themeInitScript } from "@/components/theme/ThemeProvider
 // because it presented no identity signals (see also public/robots.txt,
 // public/.well-known/security.txt, and src/app/sitemap.ts).
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bookwithhunter.com"),
+  metadataBase: new URL(PUBLIC_BASE_URL),
   title: {
     default: `Book with ${OWNER_NAME}`,
     template: `%s · Book with ${OWNER_NAME}`,
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: `Book with ${OWNER_NAME}`,
     type: "website",
-    url: "https://bookwithhunter.com",
+    url: PUBLIC_BASE_URL,
   },
 };
 

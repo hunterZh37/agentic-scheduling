@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { buildGoogleLoginUrl } from "@/lib/oauth/google";
 import { allowedLoginEmails } from "@/lib/auth/ownerLogin";
+import { OAUTH_BASE_URL } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,12 +24,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Sign-in only works on the host whose callback Google knows (the origin of
+  // GOOGLE_OAUTH_REDIRECT_URI). Since 2026-10-07 the public booking host is a
+  // different domain, so an owner who opens the dashboard there, or on a
+  // vercel.app deployment domain, is sent to start the flow on the right host
+  // instead of getting redirect_uri_mismatch. The session cookie then lives on
+  // that host, which is where the dashboard is used.
+  const oauthHost = new URL(OAUTH_BASE_URL).host;
+  if (req.nextUrl.host !== oauthHost) {
+    return NextResponse.redirect(new URL("/api/auth/google/start", OAUTH_BASE_URL));
+  }
+
   try {
     const state = randomUUID();
-    // Pin the callback to the origin the owner is actually on, so the session
-    // cookie is set on that same host. Using the env-configured URI would land
-    // the callback on the vercel.app deployment domain and set the cookie
-    // there, where bookwithhunter.com can't see it.
+    // Pin the callback to the origin the owner is actually on (checked above
+    // to be the OAuth host), so the session cookie is set on that same host.
     const loginRedirectUri = new URL("/api/oauth/google/callback", req.nextUrl.origin).toString();
     const res = NextResponse.redirect(buildGoogleLoginUrl(state, loginRedirectUri));
     // Remember it: the token exchange must present a byte-identical value.

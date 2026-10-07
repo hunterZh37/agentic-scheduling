@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { teamForSlug, firstNamesLabel } from "@/lib/teams/resolve";
 import { HOST } from "@/lib/booking/publicConfig";
+import { PUBLIC_HOST } from "@/lib/env";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
@@ -79,7 +80,7 @@ export async function renderTeamOgImage(slug: string): Promise<ImageResponse> {
               fontWeight: 600,
             }}
           >
-            bookwithhunter.com
+            {PUBLIC_HOST}
           </div>
         </div>
       </div>

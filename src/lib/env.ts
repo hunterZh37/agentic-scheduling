@@ -28,6 +28,25 @@ export const APP_BASE_URL =
 export const PUBLIC_BASE_URL =
   optionalEnv("PUBLIC_BASE_URL") ?? "http://localhost:3000";
 
+/// The public host as people read it ("book.hunterzhangconsulting.com").
+export const PUBLIC_HOST = new URL(PUBLIC_BASE_URL).host;
+
+// Where sign-in lives. Google only accepts the redirect URI registered with
+// it, and the login flow pins that URI to the host the request arrives on,
+// so a sign-in link must point at the host whose callback IS registered: the
+// origin of GOOGLE_OAUTH_REDIRECT_URI. The public booking host may differ
+// (2026-10-07: the booking page moved to an alias domain that corporate web
+// filters do not block, while OAuth stayed on the original domain).
+export const OAUTH_BASE_URL = (() => {
+  const uri = optionalEnv("GOOGLE_OAUTH_REDIRECT_URI");
+  if (!uri) return PUBLIC_BASE_URL;
+  try {
+    return new URL(uri).origin;
+  } catch {
+    return PUBLIC_BASE_URL;
+  }
+})();
+
 export const DEFAULT_DESTINATION_EMAIL =
   optionalEnv("DEFAULT_DESTINATION_EMAIL") ??
   optionalEnv("OWNER_EMAIL") ??

@@ -434,7 +434,7 @@
       "items": [
         "Visitors, the public agent and unauthenticated MCP never see titles or attendees",
         "Every alert and reminder leaves through the notify pipeline",
-        "The booking page answers on bookwithhunter.com and on book.hunterzhangconsulting.com, for networks whose web filter blocks the primary domain by rating"
+        "The public booking host is book.hunterzhangconsulting.com; bookwithhunter.com still answers (every link ever sent works) and keeps owner sign-in, whose OAuth callback is registered there"
       ]
     }
   ]

@@ -1,4 +1,4 @@
-# Security contact for bookwithhunter.com — the booking page for Hunter Zhang
+# Security contact for book.hunterzhangconsulting.com and bookwithhunter.com — the booking page for Hunter Zhang
 # Consulting (hunterzhangconsulting.com), the personal consulting practice of
 # Hunter Zhang, covering AI/ML, robotics, automation, product development,
 # and intelligence safety. Visitors pick an open time and book a meeting; the
@@ -7,4 +7,5 @@
 Contact: mailto:hunterzhang121@outlook.com
 Expires: 2027-08-01T00:00:00.000Z
 Preferred-Languages: en
+Canonical: https://book.hunterzhangconsulting.com/.well-known/security.txt
 Canonical: https://bookwithhunter.com/.well-known/security.txt
