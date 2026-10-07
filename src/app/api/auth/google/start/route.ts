@@ -24,12 +24,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Sign-in only works on the host whose callback Google knows (the origin of
-  // GOOGLE_OAUTH_REDIRECT_URI). Since 2026-10-07 the public booking host is a
-  // different domain, so an owner who opens the dashboard there, or on a
-  // vercel.app deployment domain, is sent to start the flow on the right host
-  // instead of getting redirect_uri_mismatch. The session cookie then lives on
-  // that host, which is where the dashboard is used.
+  // Sign-in only works on the host whose login callback Google knows and where
+  // the dashboard is used (AUTH_BASE_URL). Since 2026-10-07 the public booking
+  // host is a different domain, so an owner who opens the dashboard there, or
+  // on a vercel.app deployment domain, is sent to start the flow on the right
+  // host instead of getting redirect_uri_mismatch or a cookie on the wrong
+  // host.
   const oauthHost = new URL(OAUTH_BASE_URL).host;
   if (req.nextUrl.host !== oauthHost) {
     return NextResponse.redirect(new URL("/api/auth/google/start", OAUTH_BASE_URL));
