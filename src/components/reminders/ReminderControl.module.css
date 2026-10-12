@@ -22,9 +22,17 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--space-2);
+  column-gap: var(--space-3);
   row-gap: var(--space-1);
   width: 100%;
+}
+/* In the event panel the bell sits in the 18px icon gutter beside clock,
+   calendar and people icons. Its button is wider than that gutter (a touch
+   target), so the box is pulled in on both sides to the gutter's width: the
+   ink lines up with the other icons and the label with the other rows' text
+   (optical audit, mobile, 2026-10-12). */
+.wrapInline .bell {
+  margin: 0 -4px;
 }
 .inlineLabel {
   color: var(--text-2);
@@ -358,6 +366,8 @@
   .wrapInline .bell {
     width: 44px;
     height: 44px;
+    /* 44px target in an 18px gutter: see .wrapInline .bell above. */
+    margin: -13px -13px;
   }
 
   .presetChip {
