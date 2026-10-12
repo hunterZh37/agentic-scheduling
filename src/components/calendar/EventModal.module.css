@@ -45,16 +45,19 @@
     filter: blur(0);
   }
 }
+/* An SVG cross, not the × glyph: the glyph sits on a baseline and landed low
+   in the circle (optical audit, 2026-10-12). */
 .close {
   flex-shrink: 0;
+  display: grid;
+  place-items: center;
   width: 30px;
   height: 30px;
+  padding: 0;
   border: none;
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-2);
-  font-size: 22px;
-  line-height: 1;
   cursor: pointer;
 }
 .close:hover {
@@ -141,6 +144,14 @@
   height: 18px;
   color: var(--text-2);
   margin-top: 1px;
+}
+/* A row whose content is one button, not lines of text: the icon centres on
+   the button instead of hanging at its top line (optical audit, 2026-10-12). */
+.rowCenter {
+  align-items: center;
+}
+.rowCenter .icon {
+  margin-top: 0;
 }
 .rowMain {
   font-size: var(--type-body);

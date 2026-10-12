@@ -263,6 +263,15 @@
   border-radius: var(--radius-pill);
   line-height: 1.3;
 }
+/* The bell shares the right edge with the category pill, which sits on the
+   title line. Centred on the whole two-line row it landed a line below the
+   pill and read as a stagger; it now sits on the title line too (optical
+   audit, 2026-10-12). The bell is 26px tall on a 22px line. */
+.rowBell {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: -2px;
+}
 .rowSub {
   display: flex;
   align-items: center;
@@ -364,6 +373,13 @@
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
+}
+/* The pencil leans: its ink runs from the bottom-left to the top-right of the
+   viewBox, so measured in the button it sat 0.6px left of and 0.6px below
+   centre. Nudged so the ink, not the box, is centred (optical audit,
+   2026-10-12). */
+.editBtn svg {
+  transform: translate(0.6px, -0.6px);
   transition: color var(--dur-fast) var(--ease-standard);
 }
 .editBtn:hover {

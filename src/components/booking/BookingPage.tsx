@@ -572,7 +572,10 @@ export function BookingPage({
                   />
                   <div className={styles.slotCol}>
                     <div className={styles.tzPill}>
-                      <span className={styles.globe}>◍</span>
+                      <svg className={styles.globe} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+                      </svg>
                       <select
                         className={styles.tzSelect}
                         value={bookerTz}
@@ -781,8 +784,16 @@ function MiniMonth({
       <div className={styles.monthHead}>
         <span className={styles.monthTitle}>{viewMonth.toFormat("LLLL yyyy")}</span>
         <div className={styles.monthNav}>
-          <button className={styles.monthBtn} onClick={onPrev} aria-label="Previous month">‹</button>
-          <button className={styles.monthBtn} onClick={onNext} aria-label="Next month">›</button>
+          <button className={styles.monthBtn} onClick={onPrev} aria-label="Previous month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </button>
+          <button className={styles.monthBtn} onClick={onNext} aria-label="Next month">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </button>
         </div>
       </div>
       <div className={styles.dow}>

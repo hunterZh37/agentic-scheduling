@@ -436,15 +436,26 @@
   display: flex;
   gap: var(--space-1);
 }
+/* SVG chevrons, not the ‹ › glyphs: a glyph sits on a baseline and landed
+   low in the circle (optical audit, 2026-10-12). The chevron's ink is off
+   its box centre by a third of its width, so it is nudged toward its point. */
 .monthBtn {
+  display: grid;
+  place-items: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   border-radius: var(--radius-pill);
   border: none;
   background: var(--surface-sunken);
   color: var(--text-2);
   cursor: pointer;
-  font-size: 15px;
+}
+.monthBtn:first-child svg {
+  transform: translateX(-0.5px);
+}
+.monthBtn:last-child svg {
+  transform: translateX(0.5px);
 }
 .monthBtn:hover {
   background: var(--hairline-strong);
@@ -505,9 +516,11 @@
   background: var(--surface-sunken);
   margin-bottom: var(--space-3);
 }
+/* An SVG globe, not the ◍ glyph: a glyph sits on a baseline and its ink sat
+   below the select's text centre (optical audit, 2026-10-12). */
 .globe {
+  flex-shrink: 0;
   color: var(--text-2);
-  font-size: 13px;
 }
 .tzSelect {
   flex: 1;

@@ -449,7 +449,9 @@ export function EventModal({
               </button>
             )}
             <button className={styles.close} onClick={onClose} aria-label="Close">
-              ×
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
             </button>
           </div>
         </div>
@@ -601,7 +603,7 @@ export function EventModal({
           </div>
 
           {item.videoLink && (
-            <div className={styles.row}>
+            <div className={`${styles.row} ${styles.rowCenter}`}>
               <RowIcon name="video" />
               <a className={styles.joinBtn} href={item.videoLink} target="_blank" rel="noopener noreferrer">
                 Join with {videoProvider(item.videoLink)}

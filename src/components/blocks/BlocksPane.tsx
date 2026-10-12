@@ -1280,17 +1280,19 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                         control, same place, for every item a reminder can
                         attach to. */}
                     {!isDemo && (isTodo || isEvent || item.kind === "booking") && (
-                      <ReminderControl
-                        title={item.title}
-                        startISO={item.start}
-                        itemRef={
-                          isTodo
-                            ? { kind: "todo", id: item.todoId! }
-                            : isEvent
-                              ? { kind: "event", id: item.eventId!, account: item.accountEmail }
-                              : { kind: "booking", id: item.key.replace(/^booking:/, "") }
-                        }
-                      />
+                      <span className={styles.rowBell}>
+                        <ReminderControl
+                          title={item.title}
+                          startISO={item.start}
+                          itemRef={
+                            isTodo
+                              ? { kind: "todo", id: item.todoId! }
+                              : isEvent
+                                ? { kind: "event", id: item.eventId!, account: item.accountEmail }
+                                : { kind: "booking", id: item.key.replace(/^booking:/, "") }
+                          }
+                        />
+                      </span>
                     )}
                   </li>
                   </Fragment>
