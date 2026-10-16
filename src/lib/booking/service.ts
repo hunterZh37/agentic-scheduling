@@ -31,6 +31,7 @@ import {
 import { expandBlocks } from "@/lib/availability/index";
 import { actionableBusy } from "@/lib/availability/actionableBusy";
 import { checkSlotBookable, type BookingRejection } from "./conflict";
+import { describeConflict, withoutNamed, type NamedBusy } from "./conflictReason";
 import { computeReminderPlan } from "./schedule";
 
 export class BookingError extends Error {
@@ -98,6 +99,16 @@ export interface CreateBookingInput {
   /// Skip the attendee confirmation email. Used by the demo, whose fixed demo
   /// attendee address is not a real inbox — sending would just bounce.
   suppressAttendeeEmail?: boolean;
+  /// OWNER EDIT: the owner moving or creating a booking from the dashboard.
+  /// Reserved blocks and carried-over actionables are the owner's own fences
+  /// and the owner may step over them; notice and horizon rules exist for
+  /// visitors. Real calendar conflicts still refuse (owner, 2026-10-15).
+  ownerEdit?: boolean;
+  /// RESCHEDULE: the booking being moved. It is still confirmed, and its
+  /// calendar event still live, while the new slot is checked, so it must not
+  /// be named as the thing in the way. (It still counts as busy: see
+  /// docs/REGRESSIONS.md #69 for the open question of self-overlap.)
+  excludeBookingId?: string;
   /// The public origin the visitor booked on (see publicOrigin). Links we send
   /// them (the manage/reschedule link) stay on that host, because a visitor on
   /// the alias host is there precisely because the primary host is blocked for
@@ -215,12 +226,58 @@ export async function createBooking(
   // Hiding a slot on the page is not enough: this is the write path, and a
   // direct API call reaches it without ever loading the page.
   const todoBusy = await actionableBusy(input.start, input.end);
-  const rejection = checkSlotBookable(
-    { start: input.start, end: input.end },
-    [...busy, ...blockBusy, ...todoBusy],
-    now,
-    settings
-  );
+  // The owner's own edits are fenced only by real calendar conflicts.
+  const gatedBusy = input.ownerEdit ? busy : [...busy, ...blockBusy, ...todoBusy];
+  const gateSettings = input.ownerEdit ? { ...settings, minNoticeHours: 0, bookingHorizonDays: 3650 } : settings;
+  const rejection = checkSlotBookable({ start: input.start, end: input.end }, gatedBusy, now, gateSettings);
+  if (rejection === "conflict") {
+    // Say WHAT is in the way. The owner's day list does not show reserved
+    // blocks for days other than today, so "conflict" alone read as a bug
+    // (owner, 2026-10-15). Only the conflict path pays for the extra lookups,
+    // and a failure in them must not turn a rejection into a crash: fall
+    // back to the bare word.
+    let why = "conflict.";
+    try {
+      const named: NamedBusy[] = [];
+      // Expand over the surrounding day so the block's WHOLE occurrence is
+      // named (2:30 – 3:20 PM), not the sliver inside the slot (3:00 – 3:20).
+      const DAY = 24 * 60 * 60 * 1000;
+      const wideStart = new Date(input.start.getTime() - DAY);
+      const wideEnd = new Date(input.end.getTime() + DAY);
+      for (const b of input.ownerEdit ? [] : blocks) {
+        for (const iv of expandBlocks([b], wideStart, wideEnd)) {
+          named.push({ ...iv, label: `reserved time "${b.title}"`, zone: b.timezone });
+        }
+      }
+      const [todos, others] = await Promise.all([
+        prisma.todo.findMany({
+          where: { startTime: { not: null, lt: input.end }, endTime: { not: null, gt: input.start } },
+          select: { title: true, startTime: true, endTime: true },
+        }),
+        prisma.booking.findMany({
+          where: { status: BookingStatus.confirmed, startTime: { lt: input.end }, endTime: { gt: input.start } },
+          select: { id: true, title: true, startTime: true, endTime: true },
+        }),
+      ]);
+      for (const t of input.ownerEdit ? [] : (todos ?? [])) {
+        if (t.startTime && t.endTime) named.push({ start: t.startTime, end: t.endTime, label: `actionable "${t.title}"`, zone: OWNER_TIMEZONE });
+      }
+      const self = (others ?? []).filter((o) => o.id === input.excludeBookingId);
+      for (const o of others ?? []) {
+        if (o.id === input.excludeBookingId) continue;
+        named.push({ start: o.startTime, end: o.endTime, label: `booking "${o.title}"`, zone: OWNER_TIMEZONE });
+      }
+      // A named booking is also a calendar event in provider free/busy, and a
+      // named actionable is also in the actionable busy set: report each once.
+      // The booking being moved is dropped from both without being named.
+      const accounted = [...named, ...self.map((o) => ({ start: o.startTime, end: o.endTime }))];
+      const unnamed = withoutNamed(input.ownerEdit ? busy : [...busy, ...todoBusy], accounted);
+      why = describeConflict({ start: input.start, end: input.end }, named, unnamed);
+    } catch {
+      // keep "conflict."
+    }
+    throw new BookingError("conflict", `Slot cannot be booked: ${why}`);
+  }
   if (rejection) {
     throw new BookingError(rejection, `Slot cannot be booked: ${rejection}.`);
   }
@@ -574,7 +631,7 @@ export async function cancelBooking(
 /// already-cancelled id.
 export async function rescheduleBooking(
   oldId: string,
-  input: { start: Date; end: Date; title?: string; publicOrigin?: string }
+  input: { start: Date; end: Date; title?: string; publicOrigin?: string; ownerEdit?: boolean }
 ): Promise<Booking> {
   const old = await prisma.booking.findUnique({ where: { id: oldId } });
   if (!old || old.status === BookingStatus.cancelled) {
@@ -594,6 +651,8 @@ export async function rescheduleBooking(
     // A reschedule sends one "moved" alert (below), not a new-booking alert.
     suppressHostAlert: true,
     publicOrigin: input.publicOrigin,
+    excludeBookingId: oldId,
+    ownerEdit: input.ownerEdit,
   });
 
   // Old event goes away only after the new one is safely booked. Best-effort:

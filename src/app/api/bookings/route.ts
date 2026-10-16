@@ -78,6 +78,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       attendeeEmail,
       attendeeTimezone,
       createdVia: body.createdVia ?? CreatedVia.private_agent,
+      // The dashboard: the owner's own booking, fenced only by real calendar conflicts.
+      ownerEdit: true,
     });
     return NextResponse.json({ booking }, { status: 201 });
   } catch (err) {

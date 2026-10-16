@@ -51,6 +51,7 @@ describe("PATCH /api/bookings/[id] — owner reschedule", () => {
       start: new Date("2026-08-21T17:00:00Z"),
       end: new Date("2026-08-21T17:30:00Z"),
       title: "Renamed",
+      ownerEdit: true,
     });
     expect((await res.json()).id).toBe("new-id");
   });

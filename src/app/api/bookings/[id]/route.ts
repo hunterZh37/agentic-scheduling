@@ -26,7 +26,8 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid_range" }, { status: 400 });
   }
   try {
-    const booking = await rescheduleBooking(id, { start, end, title: body.title });
+    // The dashboard: the owner's own edit, fenced only by real calendar conflicts.
+    const booking = await rescheduleBooking(id, { start, end, title: body.title, ownerEdit: true });
     return NextResponse.json({
       ok: true,
       id: booking.id,
