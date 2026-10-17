@@ -112,11 +112,11 @@ button:not(:disabled):active {
   bottom: 0;
   display: block;
   grid-column: 1 / -1;
-  height: 36px;
-  margin-top: -36px;
+  height: 56px;
+  margin-top: -56px;
   flex: none;
   pointer-events: none;
-  background: linear-gradient(to top, var(--scroll-edge-bg, var(--surface)), transparent);
+  background: linear-gradient(to top, var(--scroll-edge-bg, var(--surface)) 15%, transparent);
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease-standard);
   z-index: 3;

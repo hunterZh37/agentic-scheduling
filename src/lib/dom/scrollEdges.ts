@@ -14,6 +14,14 @@ export function scrollEdges(el: { scrollTop: number; scrollHeight: number; clien
   return { above: el.scrollTop > slack, below: el.scrollTop < max - slack };
 }
 
+/// How many rows sit entirely below a scroller's visible bottom. Pure: the
+/// rows' top edges and the viewport's bottom edge, both in the same pixel
+/// frame. A row whose top is within `slack` of the bottom is counted as hidden,
+/// since nothing of it can be read.
+export function countHiddenBelow(rowTops: number[], viewportBottom: number, slack = 4): number {
+  return rowTops.filter((t) => t >= viewportBottom - slack).length;
+}
+
 /// Watch a scroll container: given its ref, returns the two edge flags, kept
 /// current on scroll, on resize of the scroller or any row, and on rows being
 /// added or removed. `dep` exists for one reason: a ref object never changes
@@ -21,15 +29,28 @@ export function scrollEdges(el: { scrollTop: number; scrollHeight: number; clien
 /// way to a list) the effect must be re-run; pass whatever decides that
 /// render. Render the flags as data attributes and let CSS draw the fade
 /// (`.scrollEdges` in globals.css).
-export function useScrollEdges(ref: RefObject<HTMLElement | null>, dep: unknown): { above: boolean; below: boolean } {
-  const [edges, setEdges] = useState({ above: false, below: false });
+export function useScrollEdges(
+  ref: RefObject<HTMLElement | null>,
+  dep: unknown
+): { above: boolean; below: boolean; hiddenBelow: number } {
+  const [edges, setEdges] = useState({ above: false, below: false, hiddenBelow: 0 });
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      const next = scrollEdges(el);
-      setEdges((prev) => (prev.above === next.above && prev.below === next.below ? prev : next));
+      const flags = scrollEdges(el);
+      // Rows of THIS scroller only: a nested scroller counts its own.
+      const bottom = el.getBoundingClientRect().bottom;
+      const tops: number[] = [];
+      for (const row of el.querySelectorAll<HTMLElement>('li:not([aria-hidden="true"])')) {
+        if (row.closest(".scrollEdges") !== el) continue;
+        tops.push(row.getBoundingClientRect().top);
+      }
+      const next = { ...flags, hiddenBelow: flags.below ? countHiddenBelow(tops, bottom) : 0 };
+      setEdges((prev) =>
+        prev.above === next.above && prev.below === next.below && prev.hiddenBelow === next.hiddenBelow ? prev : next
+      );
     };
     el.addEventListener("scroll", measure, { passive: true });
     // The scroller's own box, and every direct child: a row that wraps to a

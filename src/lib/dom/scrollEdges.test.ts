@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scrollEdges } from "./scrollEdges";
+import { scrollEdges, countHiddenBelow } from "./scrollEdges";
 
 // A scroller that has more content than it shows must say so: a fade at the
 // bottom while there is more below, at the top while there is more above
@@ -24,3 +24,21 @@ describe("scrollEdges", () => {
     expect(scrollEdges({ scrollTop: 497, scrollHeight: 900, clientHeight: 400 }).below).toBe(false);
   });
 });
+
+// "It's really hard to tell that there are remaining items" (owner,
+// 2026-10-16): the fade alone was too quiet on a dark surface. The pane now
+// says how many rows are below the fold; this pins the count.
+describe("countHiddenBelow", () => {
+  it("counts rows whose top edge is at or past the visible bottom", () => {
+    expect(countHiddenBelow([10, 60, 110, 160, 210], 150)).toBe(2);
+  });
+  it("a row that starts within the slack of the bottom is hidden too: nothing of it reads", () => {
+    expect(countHiddenBelow([10, 147], 150)).toBe(1);
+    expect(countHiddenBelow([10, 140], 150)).toBe(0);
+  });
+  it("nothing below: zero", () => {
+    expect(countHiddenBelow([10, 60], 150)).toBe(0);
+    expect(countHiddenBelow([], 150)).toBe(0);
+  });
+});
+

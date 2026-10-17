@@ -852,3 +852,43 @@ input.chip:focus {
     min-height: 44px;
   }
 }
+
+/* "N more below": the fade alone did not read as "there is more" on a dark
+   surface (owner, 2026-10-16). A pill pinned to the scroller's bottom edge
+   says how many rows are hidden and scrolls to them. The row takes no
+   layout height (height 0, the pill hangs above it), so it never adds blank
+   space at the end of the list, and it disappears at the bottom. */
+.moreBelowRow {
+  position: sticky;
+  bottom: 10px;
+  z-index: 4;
+  height: 0;
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: none;
+  list-style: none;
+}
+.moreBelow {
+  pointer-events: auto;
+  margin-top: -30px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 11px 0 12px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.moreBelow:hover {
+  background: var(--surface-sunken);
+}
+

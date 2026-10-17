@@ -795,6 +795,10 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   // the hook); the Today list mounts only when it has rows or the add card is
   // open, so its dep is exactly that condition.
   const paneEdges = useScrollEdges(paneScrollRef, view);
+  // "N more" pill: scrolls the scroller it sits in by most of a screen.
+  const scrollDown = (el: HTMLElement | null) => {
+    if (el) el.scrollBy({ top: Math.max(120, el.clientHeight * 0.8), behavior: "smooth" });
+  };
   const listEdges = useScrollEdges(agendaListRef, `${view}:${agendaItems.length + untimedTodos.length}:${itemExpanded}`);
 
   // Where the current-time marker sits in the agenda: after every item that has
@@ -1305,6 +1309,16 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
                   <span className={styles.nowRule} />
                 </li>
               )}
+              {listEdges.below && (
+                <li className={styles.moreBelowRow} aria-hidden="true">
+                  <button type="button" className={styles.moreBelow} onClick={() => scrollDown(agendaListRef.current)} tabIndex={-1}>
+                    {listEdges.hiddenBelow > 0 ? `${listEdges.hiddenBelow} more below` : "More below"}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                </li>
+              )}
             </ul>
           )}
         </section>
@@ -1605,6 +1619,16 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
               })}
             </ul>
           </section>
+        )}
+        {paneEdges.below && !listEdges.below && (
+          <div className={styles.moreBelowRow} aria-hidden="true">
+            <button type="button" className={styles.moreBelow} onClick={() => scrollDown(paneScrollRef.current)} tabIndex={-1}>
+              {paneEdges.hiddenBelow > 0 ? `${paneEdges.hiddenBelow} more below` : "More below"}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 
