@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import { optionalEnv } from "@/lib/env";
 import { getValidAccessToken } from "@/lib/oauth/store";
 import { rruleToGraphRecurrence } from "@/lib/calendar/recurrence";
+import { endRecurrenceAt, endDateIn } from "@/lib/calendar/series";
 
 /// True on a staging/e2e deploy: every real provider calendar write (create /
 /// update / delete) is short-circuited so the full booking → DB → email flow
@@ -356,3 +357,46 @@ async function createMicrosoftEvent(token: string, draft: EventDraft): Promise<C
   const data = (await res.json()) as { id: string; onlineMeeting?: { joinUrl?: string } };
   return { id: data.id, videoLink: data.onlineMeeting?.joinUrl };
 }
+
+/// End a recurring series at `at`: occurrences after that instant stop, the
+/// ones before stay. Deleting the series master would erase its history too
+/// ("delete all the FUTURE events with Olga", owner, 2026-10-18). Takes the
+/// series id (Google recurringEventId / Microsoft seriesMasterId), reads the
+/// current rule and writes it back with an end. No guest notifications.
+export async function endSeriesAt(account: Account, seriesId: string, at: Date): Promise<void> {
+  if (calendarStubbed()) return;
+  const token = await getValidAccessToken(account);
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  if (account.provider === Provider.google) {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(seriesId)}`;
+    const cur = await fetchWithRetry(url, { headers });
+    if (!cur.ok) throw new Error(`Google event read failed: ${cur.status} ${await cur.text()}`);
+    const ev = (await cur.json()) as { recurrence?: string[] };
+    if (!ev.recurrence?.some((l) => /^RRULE:/i.test(l))) throw new Error("That event is not a recurring series.");
+    const res = await fetchWithRetry(`${url}?sendUpdates=none`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ recurrence: endRecurrenceAt(ev.recurrence, at) }),
+    });
+    if (!res.ok) throw new Error(`Google series update failed: ${res.status} ${await res.text()}`);
+    return;
+  }
+  const url = `https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(seriesId)}`;
+  const cur = await fetchWithRetry(url, { headers });
+  if (!cur.ok) throw new Error(`Microsoft event read failed: ${cur.status} ${await cur.text()}`);
+  const ev = (await cur.json()) as { recurrence?: { pattern: unknown; range: { startDate: string; recurrenceTimeZone?: string } } };
+  if (!ev.recurrence) throw new Error("That event is not a recurring series.");
+  const zone = ev.recurrence.range.recurrenceTimeZone || "UTC";
+  const res = await fetchWithRetry(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({
+      recurrence: {
+        pattern: ev.recurrence.pattern,
+        range: { type: "endDate", startDate: ev.recurrence.range.startDate, endDate: endDateIn(at, zone), recurrenceTimeZone: zone },
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`Microsoft series update failed: ${res.status} ${await res.text()}`);
+}
+
