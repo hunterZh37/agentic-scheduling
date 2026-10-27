@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { parseIsoDate } from "@/lib/validation";
-import { diffItems, parseIncomingItems, withItems, withProgress, NOTES_MAX } from "@/lib/todos/items";
+import { parseIncomingItems, withProgress, NOTES_MAX } from "@/lib/todos/items";
+import { applyTodoUpdate, deleteTodo, type TodoUpdateData } from "@/lib/todos/service";
 
 export const runtime = "nodejs";
 
@@ -48,17 +47,7 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid_input", message: "title cannot be empty." }, { status: 400 });
   }
 
-  const data: {
-    title?: string;
-    done?: boolean;
-    date?: Date;
-    startTime?: Date | null;
-    endTime?: Date | null;
-    location?: string | null;
-    videoLink?: string | null;
-    phone?: string | null;
-    notes?: string | null;
-  } = {};
+  const data: TodoUpdateData = {};
   if (body.title !== undefined) data.title = body.title.trim();
   if (body.date !== undefined) {
     const d = parseIsoDate(body.date);
@@ -117,31 +106,11 @@ export async function PATCH(
     }
   }
 
-  try {
-    const todo = await prisma.$transaction(async (tx) => {
-      if (incoming && "items" in incoming) {
-        const existing = await tx.todoItem.findMany({ where: { todoId: id }, select: { id: true, title: true, done: true } });
-        const d = diffItems(existing, incoming.items);
-        if (d.delete.length) await tx.todoItem.deleteMany({ where: { id: { in: d.delete }, todoId: id } });
-        for (const u of d.update) {
-          // Scoped and count-tolerant: an item removed by another tab between
-          // the read and this write is simply gone, not a 404 for the todo.
-          await tx.todoItem.updateMany({
-            where: { id: u.id, todoId: id },
-            data: { title: u.title, done: u.done, sortOrder: u.sortOrder },
-          });
-        }
-        if (d.create.length) await tx.todoItem.createMany({ data: d.create.map((c) => ({ ...c, todoId: id })) });
-      }
-      return tx.todo.update({ where: { id }, data, include: withItems });
-    });
-    return NextResponse.json({ todo: withProgress(todo) });
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
-    throw err;
-  }
+  // The write itself (field update + list reconciliation) lives in the todo
+  // service, shared with the MCP update_actionable tool.
+  const todo = await applyTodoUpdate(id, data, incoming && "items" in incoming ? incoming.items : undefined);
+  if (!todo) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  return NextResponse.json({ todo: withProgress(todo) });
 }
 
 export async function DELETE(
@@ -149,13 +118,7 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await ctx.params;
-  try {
-    await prisma.todo.delete({ where: { id } });
-    return NextResponse.json({ deleted: id });
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
-    throw err;
-  }
+  const gone = await deleteTodo(id);
+  if (!gone) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  return NextResponse.json({ deleted: id, carriedFrom: gone.carriedFrom });
 }

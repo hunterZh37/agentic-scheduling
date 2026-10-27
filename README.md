@@ -94,6 +94,26 @@ Invite your agent to WhatsApp, even Slack, and schedule meetings entirely over t
 create, move, or cancel events, check availability, and get booking alerts the moment
 they happen.
 
+### An MCP server for your other agents
+
+Any MCP client (Claude Desktop, Claude Code, your own agent) can connect to
+`POST /api/mcp` as a stateless Streamable HTTP tool server. Without a token it
+sees free/busy and booking only: `get_availability`, `find_mutual_times`,
+`create_booking`. With `Authorization: Bearer <MCP_TOKEN>` it also gets the
+private tools: `get_schedule`, `list_calendars`, `create_event`,
+`update_event`, `delete_event`, `create_personal_block`, `create_actionable`,
+`list_actionables`, `update_actionable`, `delete_actionable`, `set_reminder`.
+Unauthenticated callers never see the private tool names. `GET /api/mcp`
+shows which tools the caller can use, so a misconfigured token is obvious.
+
+Actionables are day-scoped to-dos: list them for a range (timed and untimed,
+with item ids and checked state; the end is exclusive), move or retime one
+with `update_actionable` instead of creating a second copy (a timed one keeps
+its time of day when moved by day alone; a re-sent to-do list keeps what is
+already checked), and remove one with `delete_actionable` (irreversible; one
+occurrence only for a recurring to-do; a copy carried over from an unfinished
+day takes its unfinished earlier copies with it, or it would come back).
+
 ### Bonus: a Chrome extension for other people's Calendly pages
 
 ![The Chrome extension badging Calendly time slots with your own free/busy](docs/media/calendly-extension.png)

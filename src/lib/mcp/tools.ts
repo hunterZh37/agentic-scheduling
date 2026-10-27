@@ -1,6 +1,8 @@
 import { CreatedVia } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { diffItems, NOTES_MAX } from "@/lib/todos/items";
+import { diffItems, parseIncomingItems, NOTES_MAX } from "@/lib/todos/items";
+import { applyTodoUpdate, deleteTodo, listTodosBetween, todoDay, type TodoUpdateData, type TodoWithItems } from "@/lib/todos/service";
+import { shiftToDay } from "@/lib/todos/carryForward";
 import { createEventOnce } from "@/lib/calendar/createOnce";
 import { getAvailability } from "@/lib/availability/service";
 import { computeMutualSlots } from "@/lib/agent/mutualSlots";
@@ -160,7 +162,7 @@ const getScheduleTool: McpTool = {
   name: "get_schedule",
   tier: "private",
   description:
-    "Read the owner's full schedule for a range: real calendar events (with titles and attendees), reserved blocks, bookings, birthdays and timed actionables.",
+    "Read the owner's full schedule for a range: real calendar events (with titles and attendees), reserved blocks, bookings, birthdays and every actionable on the days overlapping the range, timed or not (start/end null when untimed; endISO exclusive). Actionable ids feed update_actionable and delete_actionable.",
   inputSchema: {
     type: "object",
     properties: {
@@ -170,7 +172,11 @@ const getScheduleTool: McpTool = {
     required: ["startISO", "endISO"],
   },
   run: async (a) => {
-    const view = await getScheduleView(parseDate(a.startISO, "startISO"), parseDate(a.endISO, "endISO"));
+    const start = parseDate(a.startISO, "startISO"), end = parseDate(a.endISO, "endISO");
+    // Actionables come from the todo service, not the view: the view carries
+    // only TIMED ones (it places them on the grid), which hid every untimed
+    // actionable from MCP and left callers re-creating what already existed.
+    const [view, todos] = await Promise.all([getScheduleView(start, end), listTodosBetween(start, end)]);
     return {
       events: view.events.map((e) => ({
         id: e.id, account: e.accountEmail, title: e.title,
@@ -180,9 +186,7 @@ const getScheduleTool: McpTool = {
       bookings: view.bookings.map((b) => ({
         id: b.id, title: b.title, start: iso(b.start), end: iso(b.end), attendee: b.attendeeName,
       })),
-      actionables: (view.actionables ?? []).map((t) => ({
-        id: t.id, title: t.title, start: iso(t.start), end: iso(t.end), done: t.done,
-      })),
+      actionables: todos.map(actionableOut),
       timezone: OWNER_TIMEZONE,
       warnings: view.warnings,
     };
@@ -380,6 +384,181 @@ const createActionableTool: McpTool = {
   },
 };
 
+/// One shape for every actionable the server hands back, so an agent can read
+/// a list, edit, and read the result the same way. `day` is the owner-local
+/// calendar day; start/end are null for an untimed actionable.
+function actionableOut(t: TodoWithItems) {
+  return {
+    id: t.id,
+    title: t.title,
+    day: todoDay(t.date),
+    start: t.startTime ? iso(t.startTime) : null,
+    end: t.endTime ? iso(t.endTime) : null,
+    done: t.done,
+    recurring: !!t.recurringTodoId,
+    items: t.items.map((i) => ({ id: i.id, title: i.title, done: i.done })),
+    notes: t.notes,
+  };
+}
+
+/// Widest range list_actionables will answer: every row carries its items, so
+/// an open-ended range is a slow, oversized reply, never a useful one.
+const LIST_RANGE_MAX_DAYS = 366;
+
+const bool = (v: unknown, field: string): boolean | undefined => {
+  if (v === undefined) return undefined;
+  if (typeof v !== "boolean") throw new Error(`${field} must be true or false`);
+  return v;
+};
+
+const listActionablesTool: McpTool = {
+  name: "list_actionables",
+  tier: "private",
+  description:
+    "List every actionable (timed and untimed) on the days overlapping a range, with ids, done state, to-do items (each with its own id and done state) and notes. Call this before create_actionable so an existing one is updated, not duplicated.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      startISO: { type: "string", description: "Range start, ISO 8601. The owner-local day it falls on is included." },
+      endISO: { type: "string", description: "Range end, ISO 8601, EXCLUSIVE: a day beginning at or after it is left out. To include a whole last day pass the following midnight in the owner's timezone, or late that evening. At most 366 days." },
+    },
+    required: ["startISO", "endISO"],
+  },
+  run: async (a) => {
+    const start = parseDate(a.startISO, "startISO"), end = parseDate(a.endISO, "endISO");
+    if (end < start) throw new Error("endISO must not be before startISO");
+    if (end.getTime() - start.getTime() > LIST_RANGE_MAX_DAYS * 86_400_000) {
+      throw new Error(`range is wider than ${LIST_RANGE_MAX_DAYS} days; ask for a narrower window`);
+    }
+    const todos = await listTodosBetween(start, end);
+    return { actionables: todos.map(actionableOut), timezone: OWNER_TIMEZONE };
+  },
+};
+
+const updateActionableTool: McpTool = {
+  name: "update_actionable",
+  tier: "private",
+  description:
+    "Change an existing actionable (get the id from list_actionables or get_schedule): retitle, move to another day, set or clear its time, mark it done, replace its notes or its to-do list. Use this to reschedule instead of creating a new one.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      title: { type: "string" },
+      dayISO: { type: "string", description: "Move to this day (any instant on it, owner's timezone). A timed actionable keeps its time of day on the new day unless startISO/endISO are also given." },
+      startISO: { type: "string", description: "New start, ISO 8601. With endISO sets the time; alone, on a timed actionable, keeps the stored end. Both must fall on dayISO when given, otherwise the actionable moves to the day startISO falls on." },
+      endISO: { type: "string", description: "New end, ISO 8601. Alone, on a timed actionable, keeps the stored start." },
+      clearTime: { type: "boolean", description: "true makes it untimed (all-day) again." },
+      done: { type: "boolean" },
+      notes: { type: "string", description: "Replaces the notes. Empty string clears." },
+      items: {
+        type: "array",
+        description: "Replaces the to-do list, in order. Strings or {id, title, done}. An item that matches an existing one (by id, or by title when it has no id) keeps its id and its checked state unless done is given.",
+        items: {
+          anyOf: [
+            { type: "string" },
+            { type: "object", properties: { id: { type: "string" }, title: { type: "string" }, done: { type: "boolean" } }, required: ["title"] },
+          ],
+        },
+      },
+    },
+    required: ["id"],
+  },
+  run: async (a) => {
+    const id = str(a.id);
+    if (!id) throw new Error("id is required");
+    const existing = await prisma.todo.findUnique({ where: { id }, select: { id: true, startTime: true, endTime: true } });
+    if (!existing) throw new Error(`No actionable with id ${id}. Call list_actionables for current ids.`);
+
+    const data: TodoUpdateData = {};
+    if (a.title !== undefined) {
+      const title = str(a.title);
+      if (!title) throw new Error("title cannot be empty");
+      data.title = title;
+    }
+    const done = bool(a.done, "done");
+    if (done !== undefined) data.done = done;
+    if (a.notes !== undefined) {
+      if (typeof a.notes !== "string") throw new Error("notes must be a string");
+      data.notes = a.notes.trim().slice(0, NOTES_MAX) || null;
+    }
+
+    let day: DateTime | null = null;
+    if (a.dayISO !== undefined) {
+      day = DateTime.fromISO(String(a.dayISO), { zone: OWNER_TIMEZONE }).startOf("day");
+      if (!day.isValid) throw new Error("dayISO is not a valid date");
+      data.date = day.toUTC().toJSDate();
+    }
+
+    const hasStart = a.startISO !== undefined, hasEnd = a.endISO !== undefined;
+    const timed = !!(existing.startTime && existing.endTime);
+    if (bool(a.clearTime, "clearTime")) {
+      if (hasStart || hasEnd) throw new Error("clearTime cannot be combined with startISO/endISO");
+      data.startTime = null;
+      data.endTime = null;
+    } else if (hasStart || hasEnd) {
+      if (hasStart !== hasEnd && !timed) throw new Error("pass both startISO and endISO to give an untimed actionable a time");
+      // One end alone keeps the other where it is, moved to the new day if the
+      // day changes (shiftToDay keeps the wall-clock time, DST-safe).
+      const target = day ?? (hasStart
+        ? DateTime.fromJSDate(parseDate(a.startISO, "startISO")).setZone(OWNER_TIMEZONE).startOf("day")
+        : DateTime.fromJSDate(existing.startTime!).setZone(OWNER_TIMEZONE).startOf("day"));
+      const start = hasStart ? parseDate(a.startISO, "startISO") : shiftToDay(existing.startTime!, target);
+      const end = hasEnd ? parseDate(a.endISO, "endISO") : shiftToDay(existing.endTime!, target);
+      if (end <= start) throw new Error("endISO must be after startISO");
+      // Both instants must sit on the actionable's owner-local day, or it
+      // would show on one day's grid and another day's checklist.
+      const startDay = DateTime.fromJSDate(start).setZone(OWNER_TIMEZONE).startOf("day");
+      const endDay = DateTime.fromJSDate(end).setZone(OWNER_TIMEZONE).startOf("day");
+      if (!startDay.equals(target) || !endDay.equals(target)) {
+        throw new Error(`startISO and endISO must both fall on ${target.toISODate()} in ${OWNER_TIMEZONE}`);
+      }
+      data.startTime = start;
+      data.endTime = end;
+      if (!day) data.date = target.toUTC().toJSDate();
+    } else if (day && timed) {
+      // Moved by day alone: the times travel with it at the same wall-clock
+      // time, or the item would sit on one day's checklist and another's grid.
+      data.startTime = shiftToDay(existing.startTime!, day);
+      data.endTime = shiftToDay(existing.endTime!, day);
+    }
+
+    let items: ReturnType<typeof parseIncomingItems> | undefined;
+    if (a.items !== undefined) {
+      items = parseIncomingItems(a.items);
+      if ("error" in items) throw new Error(items.error);
+    }
+
+    if (Object.keys(data).length === 0 && !items) throw new Error("nothing to update: pass at least one field");
+    const updated = await applyTodoUpdate(id, data, items && "items" in items ? items.items : undefined, { keepItemState: true });
+    if (!updated) throw new Error(`No actionable with id ${id}. Call list_actionables for current ids.`);
+    return { ok: true, actionable: actionableOut(updated) };
+  },
+};
+
+const deleteActionableTool: McpTool = {
+  name: "delete_actionable",
+  tier: "private",
+  description:
+    "Delete an actionable by id. Destructive and irreversible. Confirm with the owner before calling. If the actionable comes from a recurring to-do, only that one occurrence is deleted; the series keeps going. If it was carried over from an unfinished earlier day, the unfinished earlier copies go with it (otherwise the next carry-forward would recreate it); the result says how many. Prefer update_actionable when the owner wants a change rather than a removal.",
+  inputSchema: {
+    type: "object",
+    properties: { id: { type: "string" } },
+    required: ["id"],
+  },
+  run: async (a) => {
+    const id = str(a.id);
+    if (!id) throw new Error("id is required");
+    const gone = await deleteTodo(id);
+    if (!gone) throw new Error(`No actionable with id ${id}. Call list_actionables for current ids.`);
+    const t = gone.todo;
+    return {
+      ok: true,
+      deleted: { id: t.id, title: t.title, day: todoDay(t.date), recurring: !!t.recurringTodoId, carriedFrom: gone.carriedFrom },
+    };
+  },
+};
+
 const setReminderTool: McpTool = {
   name: "set_reminder",
   tier: "private",
@@ -417,6 +596,9 @@ export const MCP_TOOLS: McpTool[] = [
   deleteEventTool,
   createBlockTool,
   createActionableTool,
+  listActionablesTool,
+  updateActionableTool,
+  deleteActionableTool,
   setReminderTool,
 ];
 
