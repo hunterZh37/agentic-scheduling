@@ -16,6 +16,7 @@ import {
   verifySessionToken,
 } from "@/lib/auth/session";
 import { optionalEnv } from "@/lib/env";
+import { OAUTH_FLOW_MAX_AGE } from "./flowCookie";
 
 const STATE_COOKIE = "oauth_state";
 // "Sign in with Google" reuses this same redirect URI (so no second callback
@@ -75,7 +76,7 @@ export function makeStartHandler(provider: Provider) {
       const res = NextResponse.redirect(authUrl);
       // The callback is shared with sign-in and decides which flow it is in by
       // whether the sign-in state cookie is present. One left over from an
-      // abandoned Google sign-in (it lives 10 minutes) would send this connect
+      // abandoned Google sign-in (kept for OAUTH_FLOW_MAX_AGE) would send this connect
       // down the sign-in branch, where its state cannot match. Whoever is here
       // is already signed in, so those cookies have no further use.
       res.cookies.delete(LOGIN_STATE_COOKIE);
@@ -85,7 +86,7 @@ export function makeStartHandler(provider: Provider) {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 600, // 10 min to complete consent
+        maxAge: OAUTH_FLOW_MAX_AGE,
       });
       return res;
     } catch (err) {
@@ -189,7 +190,12 @@ export function makeCallbackHandler(provider: Provider) {
     // exchanged (see connectSubject).
     const subject = await connectSubject(req);
     if (!subject) {
-      const res = NextResponse.redirect(new URL("/login", OAUTH_BASE_URL));
+      // A provider redirect (it carries a state) with neither flow's cookie and
+      // no session: the person took longer than OAUTH_FLOW_MAX_AGE, so every
+      // cookie had expired. A provider refusal (?error=) is not that. Say so; a bare /login told them nothing. A stranger
+      // hitting this URL sees the same line, which reveals nothing.
+      const expired = state && !cookieState && !providerError;
+      const res = NextResponse.redirect(new URL(expired ? "/login?error=expired" : "/login", OAUTH_BASE_URL));
       res.cookies.delete(STATE_COOKIE);
       return res;
     }

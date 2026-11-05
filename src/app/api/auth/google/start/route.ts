@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { buildGoogleLoginUrl } from "@/lib/oauth/google";
 import { allowedLoginEmails } from "@/lib/auth/ownerLogin";
 import { OAUTH_BASE_URL } from "@/lib/env";
+import { OAUTH_FLOW_MAX_AGE } from "@/lib/oauth/flowCookie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,14 +48,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 600,
+      maxAge: OAUTH_FLOW_MAX_AGE,
     });
     res.cookies.set("oauth_login_state", state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 600,
+      maxAge: OAUTH_FLOW_MAX_AGE,
     });
     return res;
   } catch (err) {

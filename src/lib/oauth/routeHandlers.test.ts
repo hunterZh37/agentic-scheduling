@@ -164,6 +164,30 @@ describe("calendar connect: callback", () => {
     expect(res.headers.get("location")).toBe(`${HOST}/login`);
   });
 
+  it("a flow that came back after its cookies expired says so on the sign-in form", async () => {
+    // The approval screen sat open past the cookie's lifetime: no sign-in or
+    // connect cookie comes back, and no session either (2026-11-05: the owner
+    // landed on a bare /login and could not tell why).
+    const res = await back({});
+    expect(connectFromCallback).not.toHaveBeenCalled();
+    expect(res.headers.get("location")).toBe(`${HOST}/login?error=expired`);
+  });
+
+  it("a provider refusal with no cookies is not called a timeout", async () => {
+    const res = await back({}, "error=access_denied&state=s1");
+    expect(res.headers.get("location")).toBe(`${HOST}/login`);
+  });
+
+  it("a bare hit on the callback (no code, no state) is just sent to sign in", async () => {
+    const res = await back({}, "");
+    expect(res.headers.get("location")).toBe(`${HOST}/login`);
+  });
+
+  it("gives the person 30 minutes to finish consent", async () => {
+    const res = await makeStartHandler(Provider.google)(request(`${HOST}/api/oauth/google/start`, await ownerCookie()));
+    expect(res.headers.get("set-cookie")).toMatch(/oauth_state=[^;]+;.*Max-Age=1800/i);
+  });
+
   it("a missing state cookie is refused on THIS host, where the dashboard can say so", async () => {
     const res = await back(await ownerCookie());
     expect(connectFromCallback).not.toHaveBeenCalled();

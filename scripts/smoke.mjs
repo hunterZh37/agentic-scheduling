@@ -274,7 +274,10 @@ await check("calendar connect is not open to strangers", async () => {
   ]) {
     const r = await getAuth(path);
     const loc = r.headers.get("location") || "";
-    if (!sameUrl(loc, new URL("/login", AUTH_BASE))) bad.push(`${path.split("?")[0]} -> ${r.status} ${loc.slice(0, 60) || "(no redirect)"}`);
+    // A callback carrying a state with no cookies reads as an expired flow and
+    // adds ?error=expired (it says so on the form); still the sign-in page.
+    const want = new URL(path.includes("/callback") ? "/login?error=expired" : "/login", AUTH_BASE);
+    if (!sameUrl(loc, want)) bad.push(`${path.split("?")[0]} -> ${r.status} ${loc.slice(0, 60) || "(no redirect)"}`);
   }
   return { ok: bad.length === 0, detail: bad.length ? bad.join(" · ") : "start and callback both send an anonymous caller to sign in" };
 });
