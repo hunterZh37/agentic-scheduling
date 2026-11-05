@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Provider } from "@prisma/client";
+import { Prisma, Provider } from "@prisma/client";
 import { randomUUID } from "crypto";
-import { APP_BASE_URL } from "@/lib/env";
+import { OAUTH_BASE_URL } from "@/lib/env";
 import { getOAuthProvider } from "./index";
 import { connectFromCallback, AccountNotFoundError } from "./store";
 import { isOwnerEmail, allowedLoginEmails } from "@/lib/auth/ownerLogin";
@@ -13,6 +13,7 @@ import {
   makeSessionToken,
   makeCoHostSessionToken,
   verifyCoHostSession,
+  verifySessionToken,
 } from "@/lib/auth/session";
 import { optionalEnv } from "@/lib/env";
 
@@ -23,21 +24,62 @@ const STATE_COOKIE = "oauth_state";
 // into the account-connect path: they grant very different things.
 const LOGIN_STATE_COOKIE = "oauth_login_state";
 
-// Where to land after a callback. UI arrives in phase 6; for now bounce to the
-// home page with a status the eventual accounts screen can surface.
+// Where to land after a connect callback: the dashboard (owner) or /cohost,
+// with a status both pages read and show (see connectResult.ts). Always on the
+// sign-in host. This used to be APP_BASE_URL, the Twilio-webhook host, where
+// the owner has no session: the result landed on a public page and was lost.
 function resultRedirect(params: Record<string, string>, path = "/"): NextResponse {
-  const url = new URL(path, APP_BASE_URL);
+  const url = new URL(path, OAUTH_BASE_URL);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   return NextResponse.redirect(url);
 }
 
+/// Whose calendar a connect is for, or null when the caller may not connect
+/// one at all. `/api/oauth/` is public in the proxy (the provider's redirect
+/// arrives with no way to add a header), so this is the only gate on it.
+///
+/// It did not exist until 2026-11-04. The callback treated "no co-host
+/// session" as "the owner", so anyone who opened the start URL and consented
+/// with their own Google account had that calendar stored as the OWNER's: its
+/// busy time then counted against the public booking page.
+///
+/// With no PRIVATE_AUTH_SECRET (local dev) the whole app is open and the
+/// caller is the owner, exactly as the proxy treats every other route.
+async function connectSubject(req: NextRequest): Promise<{ coHostId: string | null } | null> {
+  const secret = optionalEnv("PRIVATE_AUTH_SECRET");
+  if (!secret) return { coHostId: null };
+  const token = req.cookies.get(COOKIE_NAME)?.value;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (await verifySessionToken(secret, token, nowSeconds)) return { coHostId: null };
+  const coHostId = await verifyCoHostSession(secret, token, nowSeconds);
+  return coHostId ? { coHostId } : null;
+}
+
 /// GET handler that kicks off consent for a provider.
 export function makeStartHandler(provider: Provider) {
-  return async function GET(): Promise<NextResponse> {
+  return async function GET(req: NextRequest): Promise<NextResponse> {
+    // The state cookie set below and the session cookie the callback reads are
+    // both host-only, and the callback is on the sign-in host (redirect.ts). A
+    // flow started anywhere else could never complete, so start it there.
+    if (req.nextUrl.host !== new URL(OAUTH_BASE_URL).host) {
+      return NextResponse.redirect(new URL(`/api/oauth/${provider}/start`, OAUTH_BASE_URL));
+    }
+    // Only the owner or a co-host connects a calendar. Anyone else is sent to
+    // sign in rather than on to the provider.
+    if (!(await connectSubject(req))) {
+      return NextResponse.redirect(new URL("/login", OAUTH_BASE_URL));
+    }
     try {
       const state = randomUUID();
       const authUrl = getOAuthProvider(provider).buildAuthUrl(state);
       const res = NextResponse.redirect(authUrl);
+      // The callback is shared with sign-in and decides which flow it is in by
+      // whether the sign-in state cookie is present. One left over from an
+      // abandoned Google sign-in (it lives 10 minutes) would send this connect
+      // down the sign-in branch, where its state cannot match. Whoever is here
+      // is already signed in, so those cookies have no further use.
+      res.cookies.delete(LOGIN_STATE_COOKIE);
+      res.cookies.delete("oauth_login_redirect");
       res.cookies.set(STATE_COOKIE, state, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -65,13 +107,15 @@ export function makeCallbackHandler(provider: Provider) {
   return async function GET(req: NextRequest): Promise<NextResponse> {
     const url = new URL(req.url);
     const providerError = url.searchParams.get("error");
-    if (providerError) {
-      return resultRedirect({ oauth: provider, status: "error", reason: providerError });
-    }
-
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     const loginState = req.cookies.get(LOGIN_STATE_COOKIE)?.value;
+
+    // A refused or cancelled SIGN-IN: nobody is signed in, so there is no
+    // dashboard to report to. Unchanged behaviour for that flow.
+    if (providerError && loginState) {
+      return resultRedirect({ oauth: provider, status: "error", reason: providerError });
+    }
 
     // --- Sign-in flow ---------------------------------------------------
     if (loginState) {
@@ -139,17 +183,26 @@ export function makeCallbackHandler(provider: Provider) {
 
     // Whose calendar is this? The same connect endpoint serves the owner and
     // co-hosts; the session cookie riding along on this top-level callback tells
-    // them apart. A valid co-host session scopes the new Account to that co-host
-    // and returns them to their own page; anything else is the owner (null).
-    const secret = optionalEnv("PRIVATE_AUTH_SECRET");
-    const coHostId = secret
-      ? await verifyCoHostSession(
-          secret,
-          req.cookies.get(COOKIE_NAME)?.value,
-          Math.floor(Date.now() / 1000)
-        )
-      : null;
+    // them apart. An owner session stores the Account as the owner's (null); a
+    // co-host session scopes it to that co-host and returns them to their own
+    // page. No session at all is nobody's calendar: refuse before the code is
+    // exchanged (see connectSubject).
+    const subject = await connectSubject(req);
+    if (!subject) {
+      const res = NextResponse.redirect(new URL("/login", OAUTH_BASE_URL));
+      res.cookies.delete(STATE_COOKIE);
+      return res;
+    }
+    const { coHostId } = subject;
     const landing = coHostId ? "/cohost" : "/";
+
+    // The provider's own refusal (the user cancelled, or their administrator
+    // blocks the app). Reported to whoever was connecting, on their own page.
+    if (providerError) {
+      const res = resultRedirect({ oauth: provider, status: "error", reason: providerError }, landing);
+      res.cookies.delete(STATE_COOKIE);
+      return res;
+    }
 
     if (!code || !state || !cookieState || state !== cookieState) {
       return resultRedirect({ oauth: provider, status: "error", reason: "invalid_state" }, landing);
@@ -165,8 +218,17 @@ export function makeCallbackHandler(provider: Provider) {
       return res;
     } catch (err) {
       console.error(`[oauth callback] ${provider} connect failed:`, err);
-      const reason =
-        err instanceof AccountNotFoundError ? "unknown_account" : "exchange_failed";
+      // Account.email is unique across the whole table, while a connect matches
+      // within one subject. So an address the owner has cannot also be a
+      // co-host's, and the other way round: the insert fails. Say that, rather
+      // than the "try again" that will fail the same way every time.
+      const alreadyConnected =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+      const reason = alreadyConnected
+        ? "already_connected"
+        : err instanceof AccountNotFoundError
+          ? "unknown_account"
+          : "exchange_failed";
       const res = resultRedirect({ oauth: provider, status: "error", reason }, landing);
       res.cookies.delete(STATE_COOKIE);
       return res;

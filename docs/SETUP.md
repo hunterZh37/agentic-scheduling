@@ -74,8 +74,9 @@ signing in as that account.
 ```
 GOOGLE_OAUTH_CLIENT_ID="…apps.googleusercontent.com"
 GOOGLE_OAUTH_CLIENT_SECRET="…"
-GOOGLE_OAUTH_REDIRECT_URI="http://localhost:3000/api/oauth/google/callback"
 ```
+The callback is not a setting: it is always `<AUTH_BASE_URL>/api/oauth/google/callback`
+(locally `http://localhost:3000/...`), the same host you sign in on.
 (`GOOGLE_DELEGATION_SA_KEY_B64` stays empty — we use per-account OAuth for all.)
 
 ### ⚠️ Gotchas
@@ -119,8 +120,8 @@ booking destination.
 MS_OAUTH_CLIENT_ID="…"
 MS_OAUTH_CLIENT_SECRET="…"      # the secret VALUE
 MS_OAUTH_TENANT_ID="common"     # 'common' supports personal + work accounts
-MS_OAUTH_REDIRECT_URI="http://localhost:3000/api/oauth/microsoft/callback"
 ```
+The callback is always `<AUTH_BASE_URL>/api/oauth/microsoft/callback`.
 
 ---
 
@@ -214,7 +215,8 @@ add credits and it works immediately.)
    PRIVATE_AUTH_SECRET="<random string>"     # gates the private agent endpoint
    ```
 3. Update **both** OAuth redirect URIs to your production domain in the Google and
-   Azure consoles (and the `*_REDIRECT_URI` env vars).
+   Azure consoles: `<AUTH_BASE_URL>/api/oauth/<provider>/callback`. There is no
+   env var for them; they follow `AUTH_BASE_URL`.
 4. Apply the schema + seed against the prod DB:
    ```
    DATABASE_URL="<prod url>" npx prisma migrate deploy

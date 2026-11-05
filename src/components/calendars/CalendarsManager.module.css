@@ -46,6 +46,16 @@
   color: var(--text-3);
   margin-left: var(--space-1);
 }
+/* "Connected x." after a calendar connect. The darker green of the two state
+   greens: the lighter one fails contrast as caption-size text. */
+.notice {
+  color: var(--state-booking);
+  font-size: var(--type-caption);
+  margin: 0 0 var(--space-2);
+}
+.sheet:focus {
+  outline: none;
+}
 .addBtn {
   width: 28px;
   height: 28px;

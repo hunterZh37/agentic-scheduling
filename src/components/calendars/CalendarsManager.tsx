@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { accountVar } from "@/lib/design/accounts";
 import { AccountSection } from "@/components/private/AccountSection";
+import type { ConnectResult } from "@/lib/oauth/connectResult";
 import styles from "./CalendarsManager.module.css";
 
 interface AccountRow {
@@ -16,22 +17,46 @@ interface AccountRow {
   isDestination: boolean;
 }
 
-export function CalendarsManager({ onClose }: { onClose: () => void }) {
+export function CalendarsManager({
+  onClose,
+  result = null,
+}: {
+  onClose: () => void;
+  /// What a calendar connect just reported, when the sheet was opened by the
+  /// owner coming back from the provider. A failure seeds the error line; a
+  /// success is shown until the next action replaces it.
+  result?: ConnectResult | null;
+}) {
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(result?.kind === "error" ? result.message : null);
+  // "Connected x." It describes one moment, so the next thing the owner does in
+  // this sheet retires it (see the callers of setNotice(null) below).
+  const [notice, setNotice] = useState<string | null>(result?.kind === "connected" ? result.message : null);
+  // False until the first list arrives, so the sheet never claims "0 connected"
+  // (least of all next to "Connected x.") while it is still loading.
+  const [loaded, setLoaded] = useState(false);
+  // The sheet can open by itself, on the way back from the provider. Move focus
+  // into it so a keyboard or screen reader is not left on the page behind.
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    sheetRef.current?.focus();
+  }, []);
   // The account whose Remove button is armed (awaiting a confirming second click).
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/accounts")
       .then((r) => r.json())
-      .then((d) => setAccounts(d.accounts ?? []));
+      .then((d) => setAccounts(d.accounts ?? []))
+      .catch(() => setError("Couldn't load your calendars. Close this and try again."))
+      .finally(() => setLoaded(true));
   }, []);
 
   const patch = async (id: string, body: Partial<Pick<AccountRow, "displayName" | "visible">>) => {
     let previous: AccountRow | undefined;
+    setNotice(null);
     setAccounts((rows) => {
       previous = rows.find((r) => r.id === id);
       return rows.map((r) => (r.id === id ? { ...r, ...body } : r));
@@ -56,6 +81,7 @@ export function CalendarsManager({ onClose }: { onClose: () => void }) {
   // Remove (disconnect) an account. Two-click confirm via `confirmingId`. The
   // server refuses the destination account (409) — surface its message.
   const remove = async (id: string) => {
+    setNotice(null);
     try {
       const res = await fetch(`/api/accounts/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -80,6 +106,7 @@ export function CalendarsManager({ onClose }: { onClose: () => void }) {
   // told they are booked. Surface that message rather than a generic error.
   const makeDestination = async (id: string) => {
     const previous = accounts;
+    setNotice(null);
     setAccounts((rows) => rows.map((r) => ({ ...r, isDestination: r.id === id })));
     setEditingId(null);
     try {
@@ -117,17 +144,30 @@ export function CalendarsManager({ onClose }: { onClose: () => void }) {
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={sheetRef}
+        className={styles.sheet}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Calendars"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.header}>
           <h3 className={styles.title}>
-            Calendars <span className={styles.count}>{connectedCount} connected</span>
+            Calendars {loaded && <span className={styles.count}>{connectedCount} connected</span>}
           </h3>
           <a className={styles.addBtn} href="/api/oauth/google/start" aria-label="Connect a calendar">+</a>
         </div>
 
         {error && (
-          <p style={{ color: "var(--danger, #e5484d)", fontSize: "var(--type-caption)", margin: "0 0 var(--space-2)" }}>
+          <p role="alert" style={{ color: "var(--danger, #e5484d)", fontSize: "var(--type-caption)", margin: "0 0 var(--space-2)" }}>
             {error}
+          </p>
+        )}
+        {notice && loaded && !error && (
+          <p role="status" className={styles.notice}>
+            {notice}
           </p>
         )}
 

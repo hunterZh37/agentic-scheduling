@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { accountVar } from "@/lib/design/accounts";
 import { haptic } from "@/lib/motion/haptics";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
+import { useConnectResult } from "@/components/calendars/useConnectResult";
 import styles from "./ThreePane.module.css";
 
 /// Relative "Synced 2 min ago" label; "just now" under 45s, with a note when
@@ -199,7 +200,19 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
 
 /// The private "Today" workspace: merged day calendar · blocks · agent chat.
 export function ThreePane() {
-  const [managerOpen, setManagerOpen] = useState(false);
+  const [calendarsRequested, setCalendarsRequested] = useState(false);
+  // Coming back from connecting a calendar, the callback reports how it went in
+  // the query string. The Calendars sheet opens on that report and shows it, so
+  // a connect that failed says so instead of looking like nothing happened.
+  // Closing the sheet dismisses the report for good.
+  const connectResult = useConnectResult();
+  const [connectResultSeen, setConnectResultSeen] = useState(false);
+  const pendingConnectResult = connectResultSeen ? null : connectResult;
+  const managerOpen = calendarsRequested || pendingConnectResult !== null;
+  const setManagerOpen = (open: boolean) => {
+    setCalendarsRequested(open);
+    if (!open) setConnectResultSeen(true);
+  };
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
   const [coHostsOpen, setCoHostsOpen] = useState(false);
@@ -383,7 +396,9 @@ export function ThreePane() {
         ))}
       </nav>
 
-      {managerOpen && <CalendarsManager onClose={() => setManagerOpen(false)} />}
+      {managerOpen && (
+        <CalendarsManager result={pendingConnectResult} onClose={() => setManagerOpen(false)} />
+      )}
       {birthdaysOpen && <BirthdaysManager onClose={() => setBirthdaysOpen(false)} />}
       {remindersOpen && <RemindersManager onClose={() => setRemindersOpen(false)} />}
       {coHostsOpen && <CoHostsManager onClose={() => setCoHostsOpen(false)} />}

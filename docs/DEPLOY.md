@@ -57,12 +57,12 @@ Set every name below. `<domain>` = your `https://<project>.vercel.app`.
 
 **Google Calendar**
 - `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_OAUTH_REDIRECT_URI` = `<domain>/api/oauth/google/callback`
+- Register `<AUTH_BASE_URL>/api/oauth/google/callback` in Google Cloud Console. It is derived, not an env var.
 
 **Microsoft / Outlook**
 - `MS_OAUTH_CLIENT_ID`, `MS_OAUTH_CLIENT_SECRET`
 - `MS_OAUTH_TENANT_ID` = `common`
-- `MS_OAUTH_REDIRECT_URI` = `<domain>/api/oauth/microsoft/callback`
+- Register `<AUTH_BASE_URL>/api/oauth/microsoft/callback` in the Azure app registration. It is derived, not an env var.
 - `DEFAULT_DESTINATION_EMAIL` = your default booking destination email
 
 **Email reminders (Resend)**
@@ -104,7 +104,7 @@ Trigger a redeploy (push a commit or "Redeploy" in Vercel) so all env vars — i
 ---
 
 ## Later: custom domain
-Add it in Vercel, then **repeat steps 4–6's URL-dependent items** with the new host: `APP_BASE_URL`, `GOOGLE_OAUTH_REDIRECT_URI`, `MS_OAUTH_REDIRECT_URI` (env, needs redeploy for the build-time one), the Google/Azure redirect URIs, and the Twilio webhook.
+Add it in Vercel, then **repeat steps 4–6's URL-dependent items** with the new host: `APP_BASE_URL`, `AUTH_BASE_URL` (env, needs redeploy for the build-time one), the Google/Azure redirect URIs (`<AUTH_BASE_URL>/api/oauth/<provider>/callback`), and the Twilio webhook.
 
 ## Local dev is unchanged
 Docker Postgres on `localhost:5433` stays as-is. Keep `DIRECT_URL` in your local `.env` equal to `DATABASE_URL` so `prisma migrate`/`validate` work locally.

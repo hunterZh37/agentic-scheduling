@@ -1,6 +1,7 @@
 import { Provider } from "@prisma/client";
-import { optionalEnv, requireEnv } from "@/lib/env";
+import { requireEnv } from "@/lib/env";
 import { decodeJwtPayload } from "./jwt";
+import { connectRedirectUri } from "./redirect";
 import type { OAuthProvider, TokenSet, ResolvedIdentity } from "./types";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -22,10 +23,7 @@ function clientSecret() {
   return requireEnv("GOOGLE_OAUTH_CLIENT_SECRET");
 }
 function redirectUri() {
-  return (
-    optionalEnv("GOOGLE_OAUTH_REDIRECT_URI") ??
-    "http://localhost:3000/api/oauth/google/callback"
-  );
+  return connectRedirectUri("google");
 }
 
 function expiryFromSeconds(expiresIn: number): Date {
@@ -53,10 +51,10 @@ export function buildGoogleLoginUrl(state: string, loginRedirectUri: string): st
 
 /// Exchange a sign-in code. Separate from the provider's exchangeCode because
 /// the redirect_uri sent here must byte-match the one used to start the flow,
-/// and login pins that to the ORIGIN THE OWNER IS ON. The env-configured URI
-/// points at the vercel.app deployment domain; a session cookie set there
-/// would not exist on bookwithhunter.com, so login would silently bounce back
-/// to the form. Returns the Google-verified email only — no tokens are kept,
+/// and login pins that to the ORIGIN THE OWNER IS ON (the sign-in start route
+/// has already made sure that is the sign-in host). A session cookie set on
+/// any other host would not exist where the dashboard is used, so login would
+/// silently bounce back to the form. Returns the Google-verified email only — no tokens are kept,
 /// because signing in needs no ongoing access.
 export async function exchangeGoogleLoginCode(
   code: string,

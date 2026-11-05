@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useConnectResult } from "@/components/calendars/useConnectResult";
 
 interface AccountRow {
   id: string;
@@ -53,7 +54,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   empty: { color: "var(--text-3)", fontSize: 14, padding: "8px 0 4px" },
   error: { color: "var(--state-cancelled)", fontSize: 13, marginTop: 10 },
-  notice: { color: "#34c759", fontSize: 13, marginTop: 10 },
+  notice: { color: "var(--state-booking)", fontSize: 13, marginTop: 10 },
 };
 
 const dotStyle = (ok: boolean): React.CSSProperties => ({
@@ -68,7 +69,14 @@ export function CoHostCalendars() {
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // How the connect the co-host just came back from went (the callback
+  // redirects to /cohost?oauth=google&status=…). Shown until they act on the
+  // list, in the same words the owner's dashboard uses.
+  const connectResult = useConnectResult();
+  const [connectResultSeen, setConnectResultSeen] = useState(false);
+  const pending = connectResultSeen ? null : connectResult;
+  const shownError = error ?? (pending?.kind === "error" ? pending.message : null);
+  const notice = !shownError && pending?.kind === "connected" ? pending.message : null;
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,21 +87,8 @@ export function CoHostCalendars() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Surface the OAuth return status (the connect callback redirects back to
-  // /cohost?oauth=google&status=connected) and clean the URL.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("status");
-    if (status === "connected") {
-      const email = params.get("email");
-      setNotice(email ? `Connected ${email}.` : "Calendar connected.");
-    } else if (status === "error") {
-      setError("That calendar didn't connect. Please try again.");
-    }
-    if (status) window.history.replaceState({}, "", "/cohost");
-  }, []);
-
   const remove = async (id: string) => {
+    setConnectResultSeen(true);
     try {
       const res = await fetch(`/api/cohost/accounts/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -150,8 +145,8 @@ export function CoHostCalendars() {
         Connect a Google calendar
       </a>
 
-      {error && <p style={S.error}>{error}</p>}
-      {notice && <p style={S.notice}>{notice}</p>}
+      {shownError && <p role="alert" style={S.error}>{shownError}</p>}
+      {notice && <p role="status" style={S.notice}>{notice}</p>}
     </div>
   );
 }

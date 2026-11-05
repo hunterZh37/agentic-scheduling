@@ -39,6 +39,15 @@ const get = (path, opts) => fetch(BASE + path, { redirect: "manual", ...opts });
 // Sign-in lives on AUTH_BASE (see above); its checks fetch there.
 const getAuth = (path, opts) => fetch(AUTH_BASE + path, { redirect: "manual", ...opts });
 
+// Same URL, whatever a trailing slash on a configured base does to the string.
+const sameUrl = (got, want) => {
+  try {
+    return new URL(got).href === new URL(want).href;
+  } catch {
+    return false;
+  }
+};
+
 const isoDay = (offsetDays) => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + offsetDays);
@@ -244,6 +253,39 @@ await check("Google accepts our redirect URI", async () => {
     ok: !mismatch,
     detail: mismatch ? "redirect_uri_mismatch - register the URI in Google Cloud Console" : "accepted",
   };
+});
+
+// --- Calendar connect -------------------------------------------------------
+// Connecting a calendar is a round trip through the provider, and both cookies
+// it depends on (CSRF state, session) are host-only. From 2026-10-07 to
+// 2026-11-04 the trip started on the sign-in host and came back to the
+// vercel.app deployment domain, so no calendar could be connected and nothing
+// said why. The same routes also had no gate of their own: a stranger's
+// consent was stored as the OWNER's calendar. A session is needed to see the
+// provider redirect itself, so these check the two things an anonymous probe
+// can: strangers are turned away, and a start elsewhere hops to the sign-in host.
+await check("calendar connect is not open to strangers", async () => {
+  const bad = [];
+  for (const path of [
+    "/api/oauth/google/start",
+    "/api/oauth/microsoft/start",
+    "/api/oauth/google/callback?code=smoke&state=smoke",
+    "/api/oauth/microsoft/callback?code=smoke&state=smoke",
+  ]) {
+    const r = await getAuth(path);
+    const loc = r.headers.get("location") || "";
+    if (!sameUrl(loc, new URL("/login", AUTH_BASE))) bad.push(`${path.split("?")[0]} -> ${r.status} ${loc.slice(0, 60) || "(no redirect)"}`);
+  }
+  return { ok: bad.length === 0, detail: bad.length ? bad.join(" · ") : "start and callback both send an anonymous caller to sign in" };
+});
+
+await check("calendar connect started on another host hops to the sign-in host", async () => {
+  if (new URL(BASE).host === new URL(AUTH_BASE).host) return { ok: true, detail: "BASE is the sign-in host; nothing to hop from" };
+  const r = await get("/api/oauth/google/start");
+  const loc = r.headers.get("location") || "";
+  const want = new URL("/api/oauth/google/start", AUTH_BASE);
+  // Anywhere else, the state cookie lands on a host the callback never sees.
+  return { ok: sameUrl(loc, want) && !r.headers.get("set-cookie"), detail: `location=${loc.slice(0, 80) || "(none)"} want=${want.href}` };
 });
 
 // --- Identity ---------------------------------------------------------------

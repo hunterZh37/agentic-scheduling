@@ -1,6 +1,7 @@
 import { Provider } from "@prisma/client";
 import { optionalEnv, requireEnv } from "@/lib/env";
 import { decodeJwtPayload } from "./jwt";
+import { connectRedirectUri } from "./redirect";
 import type { OAuthProvider, TokenSet, ResolvedIdentity } from "./types";
 
 function tenant() {
@@ -29,10 +30,7 @@ function clientSecret() {
   return requireEnv("MS_OAUTH_CLIENT_SECRET");
 }
 function redirectUri() {
-  return (
-    optionalEnv("MS_OAUTH_REDIRECT_URI") ??
-    "http://localhost:3000/api/oauth/microsoft/callback"
-  );
+  return connectRedirectUri("microsoft");
 }
 
 function expiryFromSeconds(expiresIn: number): Date {

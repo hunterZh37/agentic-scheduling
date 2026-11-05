@@ -31,14 +31,18 @@ export const PUBLIC_BASE_URL =
 /// The public host as people read it ("book.hunterzhangconsulting.com").
 export const PUBLIC_HOST = new URL(PUBLIC_BASE_URL).host;
 
-// Where sign-in lives: AUTH_BASE_URL, the host whose /api/oauth/google/callback
-// is registered with Google for LOGIN and where the owner uses the dashboard.
-// The public booking host may differ (2026-10-07: the booking page moved to
-// an alias domain that corporate web filters do not block, while sign-in and
-// the dashboard stayed on the original domain). NOT derived from
-// GOOGLE_OAUTH_REDIRECT_URI: in production that one points at the vercel.app
-// deployment domain (it serves calendar CONNECT), and sending login there
-// would set the session cookie where the dashboard cannot see it.
+// Where sign-in lives: AUTH_BASE_URL, the host where the owner uses the
+// dashboard and co-hosts use /cohost, and so the host whose
+// /api/oauth/<provider>/callback is registered with Google and Microsoft. The
+// public booking host may differ (2026-10-07: the booking page moved to an
+// alias domain that corporate web filters do not block, while sign-in and the
+// dashboard stayed on the original domain).
+//
+// BOTH OAuth flows return here: sign-in, and calendar connect (see
+// oauth/redirect.ts). Connect used to have its own GOOGLE_OAUTH_REDIRECT_URI /
+// MS_OAUTH_REDIRECT_URI, which in production still named the vercel.app
+// deployment domain; from the day sign-in moved, no calendar could be
+// connected. Those variables are no longer read.
 export const OAUTH_BASE_URL = optionalEnv("AUTH_BASE_URL") ?? PUBLIC_BASE_URL;
 
 export const DEFAULT_DESTINATION_EMAIL =
