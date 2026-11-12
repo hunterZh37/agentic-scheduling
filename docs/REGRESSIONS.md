@@ -221,6 +221,7 @@ should assume it will happen.
 | 13 | 503 adding an event to the Outlook calendar | — | `test` `src/lib/calendar/microsoft.test.ts` |
 | 68 | "Delete all the events with Benjamin because I'm no longer meeting with him. Delete all of them from the database" | Not a database row at all: a weekly Outlook series with no end, 200+ occurrences through 2030. Events never carried the id of the series they belong to, so the only delete the app could do was one occurrence at a time, leaving the series alive | `test` `seriesId.test.ts` (an occurrence maps Google `recurringEventId` / Microsoft `seriesMasterId` to `seriesId`; a one-off has none) · deleting `seriesId` through the existing DELETE route removes the series |
 | 14 | Calendar showed the 25th when it was the 30th | Page was statically prerendered, baking "today" into the HTML at build time | `manual` — `export const dynamic = "force-dynamic"` on `src/app/page.tsx` |
+| 75 | "Why is Alex stuck on loading?" The dashboard calendar sat on Loading for about 21 seconds | Microsoft Graph took ~21s to answer `502 UnknownError` for the Outlook account, and `getScheduleView` waited for every calendar with no deadline, so one slow provider held the whole calendar | `test` `src/lib/schedule/service.test.ts` (a calendar that never answers becomes a warning after `CALENDAR_READ_TIMEOUT_MS`, its requests are aborted, and the other calendars still show) |
 
 ## Reminders
 

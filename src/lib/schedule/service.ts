@@ -1,4 +1,4 @@
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus, type Account } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { listEvents, type CalendarEvent } from "@/lib/calendar/read";
 import { expandBlock } from "@/lib/availability/index";
@@ -50,6 +50,26 @@ export interface ScheduleView {
   warnings: Array<{ email: string; message: string }>;
 }
 
+/// How long the dashboard waits for one calendar. A provider can take 20s+ to
+/// answer with an error (Microsoft Graph 502s did, 2026-11-12), and every other
+/// calendar waited with it. Past this, that calendar becomes a warning instead.
+/// 10s leaves room for a healthy read (a token refresh plus several pages).
+export const CALENDAR_READ_TIMEOUT_MS = 10_000;
+
+/// listEvents with a deadline: rejects (and cancels the requests) when the
+/// provider has not answered in time.
+function listEventsWithin(account: Account, start: Date, end: Date): Promise<CalendarEvent[]> {
+  const ctl = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      ctl.abort();
+      reject(new Error(`Didn't answer within ${CALENDAR_READ_TIMEOUT_MS / 1000} seconds.`));
+    }, CALENDAR_READ_TIMEOUT_MS);
+  });
+  return Promise.race([listEvents(account, start, end, ctl.signal), deadline]).finally(() => clearTimeout(timer));
+}
+
 /// The merged private calendar view for [start, end): real calendar events
 /// across all accounts, expanded personal-block occurrences, and bookings.
 /// PRIVATE — includes titles/attendees. Degrades gracefully per account.
@@ -83,7 +103,7 @@ export async function getScheduleView(start: Date, end: Date): Promise<ScheduleV
   // Only pull events for accounts the user has left visible in the Calendars
   // manager. Color stays each account's stable identity.
   const visibleAccounts = accounts.filter((a) => a.visible);
-  const settled = await Promise.allSettled(visibleAccounts.map((a) => listEvents(a, start, end)));
+  const settled = await Promise.allSettled(visibleAccounts.map((a) => listEventsWithin(a, start, end)));
   // A booking writes an event to the destination calendar, which then syncs back
   // via listEvents — so the same meeting would appear twice (once as a booking,
   // once as its provider event). Drop the synced provider events that belong to a

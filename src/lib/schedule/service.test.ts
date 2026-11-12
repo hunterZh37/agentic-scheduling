@@ -11,7 +11,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/calendar/read", () => ({ listEvents: vi.fn() }));
 
-import { getScheduleView } from "./service";
+import { CALENDAR_READ_TIMEOUT_MS, getScheduleView } from "./service";
 import { prisma } from "@/lib/db";
 import { listEvents } from "@/lib/calendar/read";
 
@@ -95,5 +95,37 @@ describe("getScheduleView actionables", () => {
     expect(view.actionables![0]).toMatchObject({ id: "t1", title: "Email the deck", done: false });
     // Actionables are their own kind — they are never mixed into events.
     expect(view.events).toEqual([]);
+  });
+});
+
+describe("getScheduleView: one slow calendar cannot hold up the rest", () => {
+  // Owner report 2026-11-12: "why is alex stuck on loading?" Microsoft Graph took
+  // ~21s to answer 502 for one Outlook account, and the dashboard waited on it.
+  it("gives up on a calendar after the read deadline, shows the others, and warns", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(prisma.account.findMany).mockResolvedValue([
+        { id: "fast", email: "fast@x.com", visible: true },
+        { id: "slow", email: "slow@outlook.com", visible: true },
+      ] as never);
+      let aborted = false;
+      vi.mocked(listEvents).mockImplementation((async (a: { id: string }, _s: Date, _e: Date, signal?: AbortSignal) => {
+        if (a.id === "fast") {
+          return [{ id: "e1", title: "Standup", start: new Date("2026-07-16T19:00:00Z"), end: new Date("2026-07-16T19:30:00Z"), accountEmail: "fast@x.com", allDay: false }];
+        }
+        signal?.addEventListener("abort", () => (aborted = true));
+        return new Promise(() => {}); // never answers
+      }) as never);
+      const pending = getScheduleView(new Date("2026-07-16T00:00:00Z"), new Date("2026-07-17T00:00:00Z"));
+      await vi.advanceTimersByTimeAsync(CALENDAR_READ_TIMEOUT_MS);
+      const view = await pending;
+      expect(view.events.map((e) => e.id)).toEqual(["e1"]);
+      expect(view.warnings).toEqual([
+        { email: "slow@outlook.com", message: `Didn't answer within ${CALENDAR_READ_TIMEOUT_MS / 1000} seconds.` },
+      ]);
+      expect(aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

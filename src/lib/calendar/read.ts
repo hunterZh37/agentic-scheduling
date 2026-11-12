@@ -64,11 +64,17 @@ function extractVideoLink(text?: string): string | undefined {
   return decoded.match(ZOOM_JOIN_RE)?.[0] ?? decoded.match(VIDEO_LINK_RE)?.[0];
 }
 
-export async function listEvents(account: Account, start: Date, end: Date): Promise<CalendarEvent[]> {
+/// `signal` cancels the provider requests (the dashboard gives each calendar a deadline).
+export async function listEvents(
+  account: Account,
+  start: Date,
+  end: Date,
+  signal?: AbortSignal
+): Promise<CalendarEvent[]> {
   const token = await getValidAccessToken(account);
   return account.provider === Provider.google
-    ? listGoogleEvents(account.email, token, start, end)
-    : listMicrosoftEvents(account.email, token, start, end);
+    ? listGoogleEvents(account.email, token, start, end, signal)
+    : listMicrosoftEvents(account.email, token, start, end, signal);
 }
 
 function mapGoogleStatus(s?: string): AttendeeStatus | undefined {
@@ -90,7 +96,8 @@ async function listGoogleEvents(
   email: string,
   token: string,
   start: Date,
-  end: Date
+  end: Date,
+  signal?: AbortSignal
 ): Promise<CalendarEvent[]> {
   type GoogleEventsResponse = {
     nextPageToken?: string;
@@ -126,7 +133,7 @@ async function listGoogleEvents(
     if (pageToken) params.set("pageToken", pageToken);
     const res = await fetch(
       `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: `Bearer ${token}` }, signal }
     );
     if (!res.ok) throw new Error(`Google events.list failed: ${res.status} ${await res.text()}`);
     const data = (await res.json()) as GoogleEventsResponse;
@@ -184,7 +191,8 @@ async function listMicrosoftEvents(
   email: string,
   token: string,
   start: Date,
-  end: Date
+  end: Date,
+  signal?: AbortSignal
 ): Promise<CalendarEvent[]> {
   type MsCalendarViewResponse = {
     "@odata.nextLink"?: string;
@@ -228,7 +236,7 @@ async function listMicrosoftEvents(
   let pageCount = 0;
   const MAX_PAGES = 10; // safety cap against unbounded pagination
   while (url && pageCount < MAX_PAGES) {
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, signal });
     if (!res.ok) throw new Error(`Microsoft calendarView failed: ${res.status} ${await res.text()}`);
     const data = (await res.json()) as MsCalendarViewResponse;
     for (const ev of data.value ?? []) {
