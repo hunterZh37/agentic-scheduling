@@ -39,9 +39,11 @@ export async function microsoftGetSchedule(
   accessToken: string,
   scheduleEmails: string[],
   start: Date,
-  end: Date
+  end: Date,
+  signal?: AbortSignal
 ): Promise<Interval[]> {
   const res = await fetch(GET_SCHEDULE_ENDPOINT, {
+    signal,
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

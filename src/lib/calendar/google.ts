@@ -12,9 +12,11 @@ export async function googleFreeBusy(
   accessToken: string,
   calendarIds: string[],
   timeMin: Date,
-  timeMax: Date
+  timeMax: Date,
+  signal?: AbortSignal
 ): Promise<Interval[]> {
   const res = await fetch(FREEBUSY_ENDPOINT, {
+    signal,
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

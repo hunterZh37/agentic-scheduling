@@ -40,7 +40,7 @@ export interface CalendarItem {
   htmlLink?: string;
 }
 
-interface ApiEvent {
+export interface ApiEvent {
   id: string;
   accountEmail: string;
   title: string;
@@ -64,6 +64,8 @@ export interface ScheduleApiResponse {
   birthdays: Array<{ id: string; name: string; date: string; age: number | null }>;
   actionables?: Array<{ id: string; title: string; start: string; end: string; done: boolean; location: string | null; videoLink: string | null; phone: string | null }>;
   warnings: Array<{ email: string; message: string }>;
+  /// Present on `?events=none`: the calendars to load one by one.
+  accounts?: Array<{ id: string; email: string }>;
 }
 
 export function toCalendarItems(res: ScheduleApiResponse): CalendarItem[] {

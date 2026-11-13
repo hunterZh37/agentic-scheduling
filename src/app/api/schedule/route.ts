@@ -12,7 +12,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "invalid_range", message: range.error }, { status: 400 });
   }
 
-  const view = await getScheduleView(range.start, range.end);
+  // `events=none`: everything but the provider reads, plus the calendars to
+  // load one by one from /api/schedule/events (the dashboard's progressive load).
+  const withEvents = new URL(req.url).searchParams.get("events") !== "none";
+  const view = await getScheduleView(range.start, range.end, { events: withEvents });
   return NextResponse.json({
     events: view.events.map((e) => ({
       ...e,
@@ -41,5 +44,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       end: a.end.toISOString(),
     })),
     warnings: view.warnings,
+    ...(view.accounts ? { accounts: view.accounts } : {}),
   });
 }

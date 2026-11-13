@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    account: { findMany: vi.fn().mockResolvedValue([]) },
+    account: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn() },
     personalBlock: { findMany: vi.fn().mockResolvedValue([]) },
     booking: { findMany: vi.fn().mockResolvedValue([]) },
     todo: { findMany: vi.fn().mockResolvedValue([]) },
@@ -11,7 +11,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/calendar/read", () => ({ listEvents: vi.fn() }));
 
-import { CALENDAR_READ_TIMEOUT_MS, getScheduleView } from "./service";
+import { CALENDAR_READ_TIMEOUT_MS, getAccountEvents, getScheduleView } from "./service";
 import { prisma } from "@/lib/db";
 import { listEvents } from "@/lib/calendar/read";
 
@@ -127,5 +127,54 @@ describe("getScheduleView: one slow calendar cannot hold up the rest", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("progressive dashboard load (one calendar at a time)", () => {
+  const S = new Date("2026-11-12T08:00:00Z");
+  const E = new Date("2026-11-13T08:00:00Z");
+  const ev = (id: string) => ({ id, accountEmail: "a@example.com", title: id, start: S, end: E, allDay: false });
+
+  it("events:false skips every provider read and lists the visible owner calendars", async () => {
+    vi.mocked(prisma.account.findMany).mockResolvedValue([
+      { id: "acc1", email: "a@example.com", visible: true },
+      { id: "acc2", email: "hidden@example.com", visible: false },
+    ] as never);
+    const view = await getScheduleView(S, E, { events: false });
+    expect(vi.mocked(listEvents)).not.toHaveBeenCalled();
+    expect(view.events).toEqual([]);
+    expect(view.accounts).toEqual([{ id: "acc1", email: "a@example.com" }]);
+  });
+
+  it("the default (Alex, brief, MCP) still reads every calendar and has no accounts list", async () => {
+    vi.mocked(prisma.account.findMany).mockResolvedValue([{ id: "acc1", email: "a@example.com", visible: true }] as never);
+    vi.mocked(listEvents).mockResolvedValue([ev("e1")] as never);
+    const view = await getScheduleView(S, E);
+    expect(view.events.map((e) => e.id)).toEqual(["e1"]);
+    expect(view.accounts).toBeUndefined();
+  });
+
+  it("getAccountEvents only reads a visible OWNER calendar (never a co-host's)", async () => {
+    vi.mocked(prisma.account.findFirst).mockResolvedValue(null as never);
+    expect(await getAccountEvents("cohost-acc", S, E)).toBeNull();
+    expect(vi.mocked(prisma.account.findFirst)).toHaveBeenCalledWith({
+      where: { id: "cohost-acc", coHostId: null, visible: true },
+    });
+    expect(vi.mocked(listEvents)).not.toHaveBeenCalled();
+  });
+
+  it("getAccountEvents drops events that belong to a booking, like the full view", async () => {
+    vi.mocked(prisma.account.findFirst).mockResolvedValue({ id: "acc1", email: "a@example.com" } as never);
+    vi.mocked(prisma.booking.findMany).mockResolvedValue([{ externalEventId: "booked" }] as never);
+    vi.mocked(listEvents).mockResolvedValue([ev("booked"), ev("mine")] as never);
+    const r = await getAccountEvents("acc1", S, E);
+    expect(r).toMatchObject({ ok: true, email: "a@example.com" });
+    expect(r && r.ok ? r.events.map((e) => e.id) : null).toEqual(["mine"]);
+  });
+
+  it("getAccountEvents turns a provider failure into a message, not a throw", async () => {
+    vi.mocked(prisma.account.findFirst).mockResolvedValue({ id: "acc1", email: "a@example.com" } as never);
+    vi.mocked(listEvents).mockRejectedValue(new Error("Graph 502"));
+    expect(await getAccountEvents("acc1", S, E)).toEqual({ ok: false, email: "a@example.com", message: "Graph 502" });
   });
 });

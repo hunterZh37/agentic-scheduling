@@ -14,7 +14,8 @@ import { formatRange, relativeDayTime, isOvernight } from "@/lib/timeFormat";
 import { EventModal } from "@/components/calendar/EventModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Spinner } from "@/components/ui/Spinner";
-import type { CalendarItem, ItemAttendee } from "@/components/calendar/types";
+import type { ApiEvent, CalendarItem, ItemAttendee } from "@/components/calendar/types";
+import { loadScheduleProgressively } from "@/components/calendar/progressiveSchedule";
 import ReminderControl from "@/components/reminders/ReminderControl";
 import { agendaDetailItem, untimedTodoDetailItem, upcomingBookingDetailItem, type AgendaItem, type BookingRow } from "./detailItem";
 import { dismissKey, visibleUpcomingBookings } from "./upcomingBookings";
@@ -318,6 +319,14 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   // loading spinner. Starts true for a real pane (its first fetch is pending),
   // false in demo/QA mode where data is passed in and nothing is fetched.
   const [loading, setLoading] = useState(!isDemo);
+  // Guards the progressive schedule load against a newer reload (day change),
+  // and keeps each calendar's last events for a same-day refresh.
+  const scheduleReq = useRef(0);
+  const scheduleAbort = useRef<AbortController | null>(null);
+  // Calendars whose events have not landed yet: the header spinner stays on
+  // so a slow calendar never reads as a free day.
+  const [calendarsPending, setCalendarsPending] = useState(0);
+  const scheduleEvents = useRef<{ range: string; events: Map<string, ApiEvent[]> } | null>(null);
   // Mutations here were fire-and-forget: `await fetch(...)` then reload, with
   // the response never inspected. A delete that FAILED therefore looked exactly
   // like one that succeeded — the row simply came back on reload — which is how
@@ -339,14 +348,43 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
   const reload = useCallback(async () => {
     if (isDemo) return;
     const day = selectedDay;
-    const start = encodeURIComponent(day.toUTC().toISO()!);
-    const end = encodeURIComponent(day.endOf("day").toUTC().toISO()!);
+    const startIso = day.toUTC().toISO()!;
+    const endIso = day.endOf("day").toUTC().toISO()!;
+    const start = encodeURIComponent(startIso);
+    const reqId = ++scheduleReq.current;
+    scheduleAbort.current?.abort();
+    const abort = new AbortController();
+    scheduleAbort.current = abort;
+    const range = `${startIso}|${endIso}`;
     setLoading(true);
+    // The day's calendar events arrive one calendar at a time, so a slow
+    // provider only delays its own rows (owner, 2026-11-12). The pane's spinner
+    // waits for the first part only.
+    const schedule = loadScheduleProgressively(
+      startIso,
+      endIso,
+      (snap) => {
+        if (scheduleReq.current !== reqId) return;
+        scheduleEvents.current = { range, events: snap.eventsByEmail };
+        setCalendarsPending(snap.pending.length);
+        setEvents(
+          ((snap.data.events ?? []) as EventRow[])
+            .slice()
+            .sort((a, b) => Number(a.allDay) - Number(b.allDay) || a.start.localeCompare(b.start))
+        );
+        setDayBookings((snap.data.bookings ?? []) as DayBookingRow[]);
+        setDayBirthdays((snap.data.birthdays ?? []) as DayBirthdayRow[]);
+      },
+      {
+        previous: scheduleEvents.current?.range === range ? scheduleEvents.current.events : undefined,
+        signal: abort.signal,
+      }
+    );
     try {
-      const [b, k, s, t, c, rc] = await Promise.all([
+      const [b, k, , t, c, rc] = await Promise.all([
         fetch("/api/blocks").then((r) => r.json()),
         fetch("/api/bookings").then((r) => r.json()),
-        fetch(`/api/schedule?start=${start}&end=${end}`).then((r) => r.json()),
+        schedule.base,
         fetch(`/api/todos?date=${start}`).then((r) => r.json()),
         fetch("/api/checkoffs").then((r) => r.json()),
         fetch("/api/recurring").then((r) => r.json()),
@@ -365,18 +403,15 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
           updatedAt: x.updatedAt,
         }))
       );
-      setEvents(
-        ((s.events ?? []) as EventRow[])
-          .slice()
-          .sort((a, b) => Number(a.allDay) - Number(b.allDay) || a.start.localeCompare(b.start))
-      );
-      setDayBookings((s.bookings ?? []) as DayBookingRow[]);
-      setDayBirthdays((s.birthdays ?? []) as DayBirthdayRow[]);
       setTodos((t.todos ?? []) as TodoRow[]);
       setChecked(new Set((c.keys ?? []) as string[]));
       setRecurring((rc.recurring ?? []) as RecurringRow[]);
+    } catch (err) {
+      // A newer reload cancelled this one (the owner picked another day).
+      if (abort.signal.aborted) return;
+      throw err;
     } finally {
-      setLoading(false);
+      if (scheduleReq.current === reqId) setLoading(false);
     }
   }, [isDemo, selectedDay]);
 
@@ -853,7 +888,12 @@ export function BlocksPane({ blocksOverride, bookingsOverride, eventsOverride, s
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <h2 className={styles.headerTitle}>Schedule</h2>
-          {loading && <Spinner className={styles.headerSpinner} label="Loading blocks" />}
+          {(loading || calendarsPending > 0) && (
+            <Spinner
+              className={styles.headerSpinner}
+              label={calendarsPending > 0 ? "Loading calendars" : "Loading blocks"}
+            />
+          )}
         </div>
         <div className={styles.headerRight}>
           <div className={styles.segmented} role="tablist" aria-label="Schedule layout">

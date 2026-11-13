@@ -1,6 +1,7 @@
 import { BookingStatus, type Account } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { listEvents, type CalendarEvent } from "@/lib/calendar/read";
+import { CALENDAR_READ_TIMEOUT_MS, withDeadline } from "@/lib/calendar/deadline";
 import { expandBlock } from "@/lib/availability/index";
 import { birthdayOccurrencesInRange, type BirthdayOccurrence } from "@/lib/birthdays/birthdays";
 import { OWNER_TIMEZONE } from "@/lib/clientConfig";
@@ -48,32 +49,31 @@ export interface ScheduleView {
   actionables?: ScheduleActionable[];
   /// Accounts whose events could not be loaded (not connected / API error).
   warnings: Array<{ email: string; message: string }>;
+  /// Set only when events were skipped (`{ events: false }`): the visible
+  /// owner calendars, so the dashboard can load each one on its own.
+  accounts?: Array<{ id: string; email: string }>;
 }
 
-/// How long the dashboard waits for one calendar. A provider can take 20s+ to
-/// answer with an error (Microsoft Graph 502s did, 2026-11-12), and every other
-/// calendar waited with it. Past this, that calendar becomes a warning instead.
-/// 10s leaves room for a healthy read (a token refresh plus several pages).
-export const CALENDAR_READ_TIMEOUT_MS = 10_000;
+export { CALENDAR_READ_TIMEOUT_MS };
 
-/// listEvents with a deadline: rejects (and cancels the requests) when the
-/// provider has not answered in time.
+/// listEvents with a deadline: one slow calendar becomes a warning instead of
+/// holding up the whole dashboard. See src/lib/calendar/deadline.ts.
 function listEventsWithin(account: Account, start: Date, end: Date): Promise<CalendarEvent[]> {
-  const ctl = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      ctl.abort();
-      reject(new Error(`Didn't answer within ${CALENDAR_READ_TIMEOUT_MS / 1000} seconds.`));
-    }, CALENDAR_READ_TIMEOUT_MS);
-  });
-  return Promise.race([listEvents(account, start, end, ctl.signal), deadline]).finally(() => clearTimeout(timer));
+  return withDeadline((signal) => listEvents(account, start, end, signal));
 }
 
 /// The merged private calendar view for [start, end): real calendar events
 /// across all accounts, expanded personal-block occurrences, and bookings.
 /// PRIVATE — includes titles/attendees. Degrades gracefully per account.
-export async function getScheduleView(start: Date, end: Date): Promise<ScheduleView> {
+///
+/// `{ events: false }` skips the provider reads and lists the visible accounts
+/// instead. The dashboard then loads each calendar with getAccountEvents, so a
+/// slow provider shows up last rather than holding everything (2026-11-12).
+export async function getScheduleView(
+  start: Date,
+  end: Date,
+  opts: { events?: boolean } = {}
+): Promise<ScheduleView> {
   const [accounts, blockRows, bookingRows, todoRows, birthdayResult] = await Promise.all([
     // Owner accounts/blocks ONLY (coHostId=null). A co-host's connected calendars
     // and reserved blocks are theirs alone — they must never surface on the
@@ -103,7 +103,10 @@ export async function getScheduleView(start: Date, end: Date): Promise<ScheduleV
   // Only pull events for accounts the user has left visible in the Calendars
   // manager. Color stays each account's stable identity.
   const visibleAccounts = accounts.filter((a) => a.visible);
-  const settled = await Promise.allSettled(visibleAccounts.map((a) => listEventsWithin(a, start, end)));
+  const withEvents = opts.events !== false;
+  const settled = withEvents
+    ? await Promise.allSettled(visibleAccounts.map((a) => listEventsWithin(a, start, end)))
+    : [];
   // A booking writes an event to the destination calendar, which then syncs back
   // via listEvents — so the same meeting would appear twice (once as a booking,
   // once as its provider event). Drop the synced provider events that belong to a
@@ -164,5 +167,45 @@ export async function getScheduleView(start: Date, end: Date): Promise<ScheduleV
     });
   }
 
-  return { events, blocks, bookings, birthdays, actionables, warnings };
+  return {
+    events,
+    blocks,
+    bookings,
+    birthdays,
+    actionables,
+    warnings,
+    ...(withEvents ? {} : { accounts: visibleAccounts.map((a) => ({ id: a.id, email: a.email })) }),
+  };
+}
+
+export type AccountEventsResult =
+  | { ok: true; email: string; events: CalendarEvent[] }
+  | { ok: false; email: string; message: string };
+
+/// One owner calendar's events for [start, end), with the same deadline and
+/// booking de-duplication as getScheduleView. Returns null for an id that is
+/// not a visible OWNER account: a co-host's calendar must never be readable
+/// from the owner's dashboard (the co-host privacy wall, docs/REGRESSIONS.md).
+export async function getAccountEvents(
+  accountId: string,
+  start: Date,
+  end: Date
+): Promise<AccountEventsResult | null> {
+  const account = await prisma.account.findFirst({
+    where: { id: accountId, coHostId: null, visible: true },
+  });
+  if (!account) return null;
+  const [bookingRows, read] = await Promise.all([
+    prisma.booking.findMany({
+      where: { status: BookingStatus.confirmed, startTime: { lt: end }, endTime: { gt: start } },
+      select: { externalEventId: true },
+    }),
+    listEventsWithin(account, start, end).then(
+      (events) => ({ ok: true as const, events }),
+      (err: unknown) => ({ ok: false as const, message: err instanceof Error ? err.message : String(err) })
+    ),
+  ]);
+  if (!read.ok) return { ok: false, email: account.email, message: read.message };
+  const bookingEventIds = new Set(bookingRows.map((b) => b.externalEventId).filter((id): id is string => !!id));
+  return { ok: true, email: account.email, events: read.events.filter((e) => !bookingEventIds.has(e.id)) };
 }

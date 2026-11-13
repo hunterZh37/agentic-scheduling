@@ -38,3 +38,42 @@ describe("fanOutBusy account scoping", () => {
     });
   });
 });
+
+describe("fanOutBusy: one slow calendar cannot hold up the booking page", () => {
+  // Microsoft Graph took ~21s to answer an Outlook calendar with a 502
+  // (2026-11-12), and every free/busy check waited with it. A calendar past the
+  // deadline is now a recorded error, and its request is cancelled. Callers
+  // already treat an error as "could not check": createBooking refuses to book.
+  it("records a hanging account as an error and keeps the others' busy times", async () => {
+    vi.useFakeTimers();
+    try {
+      const { googleFreeBusy } = await import("./google");
+      const { microsoftGetSchedule } = await import("./microsoft");
+      const { CALENDAR_READ_TIMEOUT_MS } = await import("./deadline");
+      vi.mocked(prisma.account.findMany).mockResolvedValue([
+        { email: "fast@example.com", provider: "google" },
+        { email: "slow@example.com", provider: "microsoft" },
+      ] as never);
+      const fastBusy = { start: new Date("2026-08-05T17:00:00Z"), end: new Date("2026-08-05T18:00:00Z") };
+      vi.mocked(googleFreeBusy).mockResolvedValue([fastBusy] as never);
+      let slowSignal: AbortSignal | undefined;
+      vi.mocked(microsoftGetSchedule).mockImplementation((_t, _e, _s, _en, signal) => {
+        slowSignal = signal;
+        return new Promise(() => {});
+      });
+
+      const pending = fanOutBusy(START, END);
+      await vi.advanceTimersByTimeAsync(CALENDAR_READ_TIMEOUT_MS + 1);
+      const result = await pending;
+
+      expect(result.busy).toEqual([fastBusy]);
+      expect(result.queried).toEqual(["fast@example.com"]);
+      expect(result.errors).toEqual([
+        { email: "slow@example.com", message: `Didn't answer within ${CALENDAR_READ_TIMEOUT_MS / 1000} seconds.` },
+      ]);
+      expect(slowSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -196,6 +196,11 @@ export function CalendarView({
           <Spinner label="Loading schedule" /> Loading…
         </div>
       )}
+      {showFetchState && !fetched.loading && fetched.slow.length > 0 && (
+        <div className={styles.statusBar}>
+          <Spinner label="Loading slow calendars" /> Still loading {fetched.slow.join(", ")}…
+        </div>
+      )}
       {showFetchState && fetched.error && !fetched.loading && (
         <div className={styles.errorBar}>
           <span>Couldn&apos;t load your schedule.</span>
